@@ -55,3 +55,7 @@ Thumbs.db
 # --- Herramientas locales ---
 .claude/
 graphify-out/
+
+# --- Documentación local (no se versiona) ---
+*.md
+*.MD
