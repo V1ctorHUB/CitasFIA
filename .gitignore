@@ -1,0 +1,57 @@
+# --- Documentos del proyecto (nunca se versionan) ---
+*.pdf
+*.PDF
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.ppt
+*.pptx
+
+# --- Secretos y variables de entorno ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+secrets/
+credentials*.json
+
+# --- Dependencias ---
+node_modules/
+.pnp
+.pnp.*
+
+# --- Builds de Next.js ---
+.next/
+out/
+build/
+next-env.d.ts
+*.tsbuildinfo
+
+# --- Pruebas y cobertura ---
+coverage/
+
+# --- Logs ---
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- Despliegue ---
+.vercel/
+
+# --- Sistema operativo y editores ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# --- Herramientas locales ---
+.claude/
+graphify-out/
