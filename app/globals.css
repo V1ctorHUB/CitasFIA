@@ -51,6 +51,8 @@ fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
 button { min-height: 48px; border: 0; border-radius: 8px; background: var(--uca-blue); color: #fff; cursor: pointer; font: inherit; font-weight: 700; transition: background .15s ease, transform .15s ease; }
 button:hover { background: #0d3177; }
 button:active { transform: translateY(1px); }
+button:disabled { background: #6b7a99; cursor: progress; transform: none; }
+.submit-error { margin: 0; padding: 14px 16px; border-radius: 8px; background: #fdecec; color: #a12020; font-weight: 600; }
 
 @media (max-width: 640px) {
   .page-shell { padding: 20px 12px; }

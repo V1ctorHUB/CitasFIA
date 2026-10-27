@@ -5,13 +5,14 @@ import { useEffect, useRef, useState } from "react";
 import AutocompleteField from "./components/AutocompleteField";
 import FieldError, { errorProps } from "./components/FieldError";
 import {
-  buildAppointmentPayload,
   CARNET_LENGTH,
   careers,
   confirmationSuccessMessage,
   createEmptyRegistration,
+  createIdempotencyKey,
   DEFAULT_PROJECT,
   deriveInstitutionalEmail,
+  enviarSolicitud,
   facultyName,
   filterCareers,
   filterProjects,
@@ -27,6 +28,7 @@ import {
   NAME_MAX_LENGTH,
   resolveProjectOnBlur,
   submissionConfirmationDurationMs,
+  submissionErrorMessage,
   validateRegistration,
 } from "../lib/registration-form.mjs";
 
@@ -56,11 +58,15 @@ export default function Home() {
   const [registration, setRegistration] = useState(createEmptyRegistration);
   const [fieldErrors, setFieldErrors] = useState({});
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [projects, setProjects] = useState([DEFAULT_PROJECT]);
   const [selectedProject, setSelectedProject] = useState(DEFAULT_PROJECT);
   const [projectQuery, setProjectQuery] = useState(DEFAULT_PROJECT.nombre);
   const [careerQuery, setCareerQuery] = useState("");
   const fieldRefs = useRef({});
+  // Se conserva entre reintentos del mismo formulario: el servidor no duplica la solicitud.
+  const idempotencyKey = useRef("");
 
   const faculty = getFacultyForCareer(registration.carrera);
   const cicloEgreso = formatGraduationCycle(registration.ciclo, registration.anio);
@@ -162,10 +168,13 @@ export default function Home() {
     setCareerQuery("");
   }
 
-  function submitRegistration(event) {
+  async function submitRegistration(event) {
     event.preventDefault();
+    if (isSubmitting) return;
+
     const project = selectedProject ?? DEFAULT_PROJECT;
     const { isValid, errors } = validateRegistration(registration, project, projects);
+    setSubmitError("");
 
     if (!isValid) {
       setFieldErrors(errors);
@@ -173,10 +182,24 @@ export default function Home() {
       return;
     }
 
-    // TODO: enviar a POST /api/citas cuando exista el backend. El servidor debe
-    // repetir validateRegistration y recalcular los campos derivados (ver ARCHITECTURE.md).
-    buildAppointmentPayload(registration, project);
+    idempotencyKey.current ||= createIdempotencyKey();
+    setIsSubmitting(true);
+    const result = await enviarSolicitud(registration, project, idempotencyKey.current);
+    setIsSubmitting(false);
 
+    if (result.status === "invalid") {
+      const hasFieldError = ERROR_FOCUS_ORDER.some((name) => result.errors[name]);
+      setFieldErrors(result.errors);
+      if (hasFieldError) focusFirstError(result.errors);
+      else setSubmitError(submissionErrorMessage);
+      return;
+    }
+    if (result.status === "rejected") {
+      setSubmitError(result.message);
+      return;
+    }
+
+    idempotencyKey.current = "";
     resetForm();
     setIsSubmitted(true);
   }
@@ -383,7 +406,13 @@ export default function Home() {
             <FieldError fieldName="cicloEgreso" message={fieldErrors.cicloEgreso} />
           </fieldset>
 
-          <button type="submit">Registrar cita</button>
+          {submitError && (
+            <p className="submit-error" role="alert">{submitError}</p>
+          )}
+
+          <button type="submit" disabled={isSubmitting} aria-busy={isSubmitting}>
+            {isSubmitting ? "Enviando..." : "Registrar cita"}
+          </button>
         </form>
       </section>
     </main>

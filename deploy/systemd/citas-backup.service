@@ -1,0 +1,10 @@
+[Unit]
+Description=Respaldo de la base de datos de citas de Servicio Social
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+# Ajusta la ruta si el proyecto vive en otra carpeta.
+WorkingDirectory=/srv/citas/applicativo-citas
+ExecStart=/srv/citas/applicativo-citas/scripts/backup.sh

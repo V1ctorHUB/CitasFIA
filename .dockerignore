@@ -1,0 +1,9 @@
+node_modules
+.next
+.git
+.env
+*.pdf
+backups
+
+# Panel local de administración: nunca entra a la imagen.
+app/admin-local

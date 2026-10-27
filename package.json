@@ -6,11 +6,20 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --test"
+    "test": "node --test",
+    "test:db": "node --test lib/db/database.integration.test.mjs",
+    "db:migrate": "node scripts/db-migrate.mjs",
+    "db:status": "node scripts/db-migrate.mjs status",
+    "db:backup": "scripts/backup.sh",
+    "db:verify-backup": "scripts/verify-backup.sh"
   },
   "dependencies": {
     "next": "16.4.0",
+    "pg": "8.23.1",
     "react": "19.2.8",
     "react-dom": "19.2.8"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

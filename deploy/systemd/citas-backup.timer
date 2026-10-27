@@ -1,0 +1,12 @@
+[Unit]
+Description=Respaldo diario de la base de datos de citas
+
+[Timer]
+# 12:30 y 22:00: después de las horas de mayor registro y antes de apagar equipos.
+OnCalendar=*-*-* 12:30:00
+OnCalendar=*-*-* 22:00:00
+# Si la laptop estuvo apagada a esa hora, el respaldo corre al encender.
+Persistent=true
+
+[Install]
+WantedBy=timers.target
