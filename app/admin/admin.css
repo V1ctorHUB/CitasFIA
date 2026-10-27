@@ -30,11 +30,11 @@
 .badge { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: #123c8c; color: #fff; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
 .panel { background: #fff; border: 1px solid #dbe2ee; border-radius: 12px; }
 
-.ac-list { position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; right: 0; max-height: 360px; overflow-y: auto; margin: 0; padding: 6px 0; list-style: none; background: #fff; border: 1px solid #dbe2ee; border-radius: 8px; box-shadow: 0 12px 28px rgb(20 41 80 / 14%); }
-.ac-empty { padding: 10px 14px; color: #5b667d; font-size: 13px; }
-.res { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; width: 100%; border: 0; background: transparent; text-align: left; padding: 10px 14px; font: inherit; color: #192033; cursor: pointer; }
-.res:hover { background: #edf3ff; }
 
+/* La bandeja tiene su propio scroll y el calendario queda fijo mientras se recorre. */
+.agenda-aside { flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; position: sticky; top: 16px; max-height: calc(100vh - 32px); }
+.agenda-aside-list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 12px 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+.agenda-calendar { flex: 999 1 640px; min-width: 0; display: flex; flex-direction: column; gap: 14px; position: sticky; top: 16px; }
 .req { display: grid; gap: 3px; width: 100%; text-align: left; border: 1px solid #dbe2ee; border-radius: 10px; background: #fff; padding: 12px; font: inherit; color: #192033; cursor: grab; }
 .req:hover { border-color: #a9b8d6; background: #fafbfe; }
 .req-sel, .req-sel:hover { border-color: #123c8c; box-shadow: 0 0 0 2px #123c8c inset; background: #f3f6fd; }
@@ -62,11 +62,7 @@
 .dl dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .sect { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #5b667d; }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 60; background: #192033; color: #fff; padding: 12px 16px; border-radius: 10px; font-size: 14px; box-shadow: 0 10px 30px rgb(17 24 39 / 30%); max-width: calc(100% - 32px); }
-.notice { padding: 12px 14px; border-radius: 10px; background: #fff6e0; color: #6b4a00; font-size: 13px; }
 
-details.mail { border-bottom: 1px solid #eef1f6; }
-details.mail summary { list-style: none; cursor: pointer; padding: 12px 2px; display: grid; gap: 2px; }
-details.mail summary::-webkit-details-marker { display: none; }
 
 .tbl { border-collapse: collapse; width: 100%; font-size: 13px; }
 .tbl th { position: sticky; top: 0; background: #f6f8fb; text-align: left; font-weight: 600; color: #3b4560; padding: 9px 10px; border-bottom: 1px solid #dbe2ee; white-space: nowrap; }
@@ -80,6 +76,8 @@ details.mail summary::-webkit-details-marker { display: none; }
 
 @media (max-width: 700px) {
   .topbar-inner { padding: 10px 16px; }
+  .agenda-aside { position: static; max-height: 60vh; }
+  .agenda-calendar { position: static; }
 }
 @media print {
   .no-print { display: none !important; }

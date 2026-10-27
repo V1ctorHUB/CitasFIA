@@ -52,7 +52,7 @@ for (let i = 0; i < 48; i += 1) {
   if (asignada.status !== "ok") continue;
   const esPasada = dia < new Date();
   if (esPasada || azar(2)) await performAction(pool, { id, accion: "confirmar" }, opts);
-  if (esPasada) await performAction(pool, { id, accion: azar(5) ? "asistio" : "no_asistio" }, opts);
+  if (esPasada) await performAction(pool, { id, accion: azar(5) ? "asistio" : "no_asistio" }, { actor: "seed-demo" });
 }
 
 console.log(`Solicitudes demo creadas: ${creadas}`);

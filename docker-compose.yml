@@ -64,7 +64,9 @@ services:
       ADMIN_NOMBRE: ${ADMIN_NOMBRE:-}
       ADMIN_CLAVE_HASH: ${ADMIN_CLAVE_HASH:?Define ADMIN_CLAVE_HASH en .env (npm run admin:clave)}
       SESSION_SECRET: ${SESSION_SECRET:?Define SESSION_SECRET en .env (npm run admin:clave)}
-      EMAIL_TRANSPORT: ${EMAIL_TRANSPORT:-}
+      ZOHO_CORREO: ${ZOHO_CORREO:-}
+      ZOHO_CLAVE: ${ZOHO_CLAVE:-}
+      ZOHO_SMTP_HOST: ${ZOHO_SMTP_HOST:-}
       TZ: America/El_Salvador
     depends_on:
       migrate:

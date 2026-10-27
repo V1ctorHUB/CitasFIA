@@ -7,7 +7,6 @@ import {
   DIAS,
   ESTADOS,
   formatLongDate,
-  formatShortDate,
   HORAS,
   isMovable,
   isoDate,
@@ -18,8 +17,6 @@ import {
 } from "../../lib/agenda.mjs";
 import { createIdempotencyKey, enviarSolicitud } from "../../lib/registration-form.mjs";
 import { adminApi, errorMessage, GENERO_LABEL, ORIGEN_LABEL } from "./api";
-
-const DOT_SOLICITUD = "#8a93a5";
 
 function weekLabel(lunes) {
   const viernes = addDays(lunes, 4);
@@ -65,7 +62,8 @@ export default function AgendaView() {
   const [semana, setSemana] = useState(0);
   const [agenda, setAgenda] = useState({ solicitudes: [], citas: [], bloqueados: [] });
   const [cargando, setCargando] = useState(true);
-  const [panel, setPanel] = useState("bandeja");
+  const [busqueda, setBusqueda] = useState("");
+  const [resultados, setResultados] = useState(null);
   const [sel, setSel] = useState(null);
   const [drag, setDrag] = useState(null);
   const [detId, setDetId] = useState(null);
@@ -97,6 +95,19 @@ export default function AgendaView() {
   }, [desde, hasta, aviso]);
 
   useEffect(() => { cargar(); }, [cargar]);
+
+  // Los resultados reemplazan a la lista de solicitudes mientras haya texto de búsqueda.
+  useEffect(() => {
+    const query = busqueda.trim();
+    if (!query) { setResultados(null); return undefined; }
+
+    let activo = true;
+    const timer = window.setTimeout(async () => {
+      const { ok, data } = await adminApi(`/api/admin/buscar?q=${encodeURIComponent(query)}`);
+      if (activo) setResultados(ok ? data.resultados : []);
+    }, 250);
+    return () => { activo = false; window.clearTimeout(timer); };
+  }, [busqueda, agenda]);
   useEffect(() => () => window.clearTimeout(toastTimer.current), []);
 
   async function accion(cita, body) {
@@ -143,68 +154,89 @@ export default function AgendaView() {
 
   return (
     <main style={{ flex: 1, width: "100%", maxWidth: 1440, margin: "0 auto", padding: "20px 24px 48px", display: "flex", flexWrap: "wrap", gap: 20, alignItems: "flex-start" }}>
-      <aside className="panel" aria-label="Bandeja" style={{ flex: "1 1 300px", minWidth: 0, display: "flex", flexDirection: "column" }}>
-        <div style={{ display: "flex", gap: 4, padding: "12px 12px 0" }}>
-          <button type="button" className={panel === "bandeja" ? "tab tab-on" : "tab"} aria-pressed={panel === "bandeja"} onClick={() => setPanel("bandeja")}>
+      <aside className="panel agenda-aside" aria-label="Solicitudes">
+        <div style={{ padding: "14px 16px 10px", display: "flex", flexDirection: "column", gap: 10, borderBottom: "1px solid #eef1f6" }}>
+          <h2 style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 16, color: "#123c8c" }}>
             Solicitudes <span className="badge">{agenda.solicitudes.length}</span>
-          </button>
-          <button type="button" className={panel === "correos" ? "tab tab-on" : "tab"} aria-pressed={panel === "correos"} onClick={() => setPanel("correos")}>
-            Correos
-          </button>
-        </div>
-
-        {panel === "bandeja" ? (
-          <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-            <p className="muted" style={{ fontSize: 13 }}>
-              {enMano
+          </h2>
+          <div style={{ position: "relative" }}>
+            <label htmlFor="buscar" className="sr-only">Buscar caso</label>
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5b667d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", left: 12, top: 14 }}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+            <input
+              id="buscar"
+              type="search"
+              value={busqueda}
+              onChange={(event) => setBusqueda(event.target.value)}
+              onKeyDown={(event) => { if (event.key === "Escape") setBusqueda(""); }}
+              autoComplete="off"
+              placeholder="Buscar caso, nombre, carnet o DUI"
+              style={{ paddingLeft: 40 }}
+            />
+          </div>
+          <p className="muted" style={{ fontSize: 13 }}>
+            {resultados
+              ? `${resultados.length} resultado(s) para “${busqueda.trim()}”.`
+              : enMano
                 ? `Haz clic en un horario libre para ubicar a ${enMano.nombreCompleto}. Vuelve a hacer clic en la tarjeta para cancelar.`
                 : "Arrastra una solicitud al calendario, o selecciónala y elige un horario."}
+          </p>
+        </div>
+
+        <div className="agenda-aside-list" role="list">
+          {!resultados && !cargando && agenda.solicitudes.length === 0 && (
+            <p className="muted" style={{ fontSize: 14, padding: "24px 8px", textAlign: "center", border: "1px dashed #d3dae6", borderRadius: 10 }}>
+              No hay solicitudes sin horario.
             </p>
-            {!cargando && agenda.solicitudes.length === 0 && (
-              <p className="muted" style={{ fontSize: 14, padding: "24px 8px", textAlign: "center", border: "1px dashed #d3dae6", borderRadius: 10 }}>
-                No hay solicitudes sin horario.
-              </p>
-            )}
-            {agenda.solicitudes.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                className={sel === s.id ? "req req-sel" : "req"}
-                draggable
-                aria-pressed={sel === s.id}
-                onClick={() => { setSel((current) => (current === s.id ? null : s.id)); setDrag(null); }}
-                onDragStart={(event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", s.id); setDrag(s); setSel(null); }}
-                onDragEnd={() => setDrag(null)}
-              >
-                <span style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12 }}>
-                  <span className="mono muted">{s.caso}</span><span className="muted">Egreso {s.ciclo_egreso}</span>
+          )}
+          {resultados && resultados.length === 0 && (
+            <p className="muted" style={{ fontSize: 14, padding: "24px 8px", textAlign: "center" }}>Ningún caso coincide.</p>
+          )}
+          {(resultados ?? agenda.solicitudes).map((s) => (s.estado === "SOLICITADA" ? (
+            <button
+              key={s.id}
+              type="button"
+              role="listitem"
+              className={sel === s.id ? "req req-sel" : "req"}
+              draggable
+              aria-pressed={sel === s.id}
+              onClick={() => { setSel((current) => (current === s.id ? null : s.id)); setDrag(null); }}
+              onDragStart={(event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", s.id); setDrag(s); setSel(null); }}
+              onDragEnd={() => setDrag(null)}
+            >
+              <span style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12 }}>
+                <span className="mono muted">{s.caso}</span><span className="muted">Egreso {s.ciclo_egreso}</span>
+              </span>
+              <span style={{ fontWeight: 600, fontSize: 15 }}>{s.nombreCompleto}</span>
+              <span className="muted" style={{ fontSize: 13 }}><span className="mono">{s.carnet}</span> · Tel. <span className="mono">{s.telefono ?? "—"}</span></span>
+              <span style={{ fontSize: 13 }}>{s.carrera}</span>
+              <span className="muted" style={{ fontSize: 13 }}>{s.proyecto} — {s.institucion}</span>
+              <span className="muted" style={{ fontSize: 12 }}>{ORIGEN_LABEL[s.origen]} · {s.recibida}</span>
+            </button>
+          ) : (
+            <button
+              key={s.id}
+              type="button"
+              role="listitem"
+              className="req"
+              style={{ cursor: "pointer" }}
+              onClick={() => { setSemana(semanaDe(s.fecha)); setDetId(s.id); }}
+            >
+              <span style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12 }}>
+                <span className="mono muted">{s.caso}</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <i aria-hidden="true" style={{ width: 8, height: 8, borderRadius: "50%", background: ESTADOS[s.estado].dot === "#ffffff" ? "#123c8c" : ESTADOS[s.estado].dot }} />
+                  {ESTADOS[s.estado].label}
                 </span>
-                <span style={{ fontWeight: 600, fontSize: 15 }}>{s.nombreCompleto}</span>
-                <span className="muted" style={{ fontSize: 13 }}><span className="mono">{s.carnet}</span> · Tel. <span className="mono">{s.telefono ?? "—"}</span></span>
-                <span style={{ fontSize: 13 }}>{s.carrera}</span>
-                <span className="muted" style={{ fontSize: 13 }}>{s.proyecto} — {s.institucion}</span>
-                <span className="muted" style={{ fontSize: 12 }}>{ORIGEN_LABEL[s.origen]} · {s.recibida}</span>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <CorreosPanel aviso={aviso} />
-        )}
+              </span>
+              <span style={{ fontWeight: 600, fontSize: 15 }}>{s.nombreCompleto}</span>
+              <span className="muted" style={{ fontSize: 13 }}><span className="mono">{s.carnet}</span> · DUI <span className="mono">{s.dui}</span></span>
+              <span style={{ fontSize: 13 }}>Cita: {formatLongDate(s.fecha)} · {s.hora} h</span>
+            </button>
+          )))}
+        </div>
       </aside>
 
-      <section aria-label="Calendario semanal" style={{ flex: "999 1 640px", minWidth: 0, display: "flex", flexDirection: "column", gap: 14 }}>
-        <Buscador
-          onElegir={(r) => {
-            if (r.estado === "SOLICITADA") {
-              setPanel("bandeja");
-              setSel(r.id);
-            } else {
-              setSemana(semanaDe(r.fecha));
-              setDetId(r.id);
-            }
-          }}
-        />
-
+      <section aria-label="Calendario semanal" className="agenda-calendar">
         <div className="panel" style={{ padding: "14px 16px", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px 12px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <button type="button" className="btn btn-ghost btn-icon" onClick={() => setSemana((s) => s - 1)} aria-label="Semana anterior">
@@ -317,6 +349,7 @@ export default function AgendaView() {
       {det && (
         <Detalle
           cita={det}
+          hoy={today}
           onClose={() => setDetId(null)}
           onAccion={(body) => accion(det, body)}
           onMover={(fecha, hora) => {
@@ -408,65 +441,7 @@ function Fila({ hora, diasIso, citas, today, bloqueado, enMano, drag, onAbrir, o
   );
 }
 
-function Buscador({ onElegir }) {
-  const [texto, setTexto] = useState("");
-  const [resultados, setResultados] = useState(null);
-
-  useEffect(() => {
-    const query = texto.trim();
-    if (!query) { setResultados(null); return undefined; }
-
-    let activo = true;
-    const timer = window.setTimeout(async () => {
-      const { ok, data } = await adminApi(`/api/admin/buscar?q=${encodeURIComponent(query)}`);
-      if (activo) setResultados(ok ? data.resultados : []);
-    }, 250);
-    return () => { activo = false; window.clearTimeout(timer); };
-  }, [texto]);
-
-  return (
-    <div style={{ position: "relative" }}>
-      <label htmlFor="buscar" className="sr-only">Buscar caso</label>
-      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5b667d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", left: 12, top: 14 }}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-      <input
-        id="buscar"
-        type="search"
-        value={texto}
-        onChange={(event) => setTexto(event.target.value)}
-        onKeyDown={(event) => { if (event.key === "Escape") setTexto(""); }}
-        autoComplete="off"
-        placeholder="Buscar por número de caso, nombre, carnet o DUI"
-        style={{ paddingLeft: 40 }}
-      />
-      {resultados && (
-        <ul className="ac-list" aria-label="Resultados de búsqueda">
-          {resultados.map((r) => {
-            const estado = ESTADOS[r.estado];
-            const dot = !estado ? DOT_SOLICITUD : estado.dot === "#ffffff" ? "#123c8c" : estado.dot;
-            return (
-              <li key={r.id}>
-                <button type="button" className="res" onClick={() => { setTexto(""); onElegir(r); }}>
-                  <span className="mono muted" style={{ fontSize: 12 }}>{r.caso}</span>
-                  <span style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-                    <span style={{ fontWeight: 600 }}>{r.nombreCompleto}</span>
-                    <span className="muted" style={{ fontSize: 12 }}>{r.carnet} · DUI {r.dui} · {r.carrera}</span>
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
-                    <i aria-hidden="true" style={{ width: 8, height: 8, borderRadius: "50%", background: dot }} />
-                    {estado ? `${formatShortDate(r.fecha)} ${r.hora} · ${estado.label}` : "Sin horario · en bandeja"}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-          {resultados.length === 0 && <li className="ac-empty">Ningún caso coincide con “{texto}”.</li>}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-function Detalle({ cita, onClose, onAccion, onMover }) {
+function Detalle({ cita, hoy, onClose, onAccion, onMover }) {
   const [historial, setHistorial] = useState([]);
   const [rep, setRep] = useState({ fecha: "", hora: "" });
   const [confirmaBorrado, setConfirmaBorrado] = useState(false);
@@ -552,8 +527,8 @@ function Detalle({ cita, onClose, onAccion, onMover }) {
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
         <button type="button" className="btn btn-primary" disabled={ocupado || cita.estado !== "PENDIENTE_CONFIRMACION"} onClick={() => ejecutar({ accion: "confirmar" })}>✓ Confirmado</button>
-        <button type="button" className="btn btn-ok" disabled={ocupado || !["CONFIRMADA", "NO_ASISTIO"].includes(cita.estado)} onClick={() => ejecutar({ accion: "asistio" }, true)}>Asistió</button>
-        <button type="button" className="btn btn-secondary" disabled={ocupado || !["CONFIRMADA", "ASISTIO"].includes(cita.estado)} onClick={() => ejecutar({ accion: "no_asistio" }, true)}>No asistió</button>
+        <button type="button" className="btn btn-ok" disabled={ocupado || cita.fecha > hoy || !["CONFIRMADA", "NO_ASISTIO"].includes(cita.estado)} onClick={() => ejecutar({ accion: "asistio" }, true)}>Asistió</button>
+        <button type="button" className="btn btn-secondary" disabled={ocupado || cita.fecha > hoy || !["CONFIRMADA", "ASISTIO"].includes(cita.estado)} onClick={() => ejecutar({ accion: "no_asistio" }, true)}>No asistió</button>
         <button type="button" className="btn btn-ghost" disabled={ocupado || !movible} onClick={() => ejecutar({ accion: "reenviar" })}>Reenviar correo</button>
         <span style={{ flex: 1 }} />
         {!confirmaBorrado && movible && <button type="button" className="btn btn-danger" onClick={() => setConfirmaBorrado(true)}>Eliminar cita</button>}
@@ -650,62 +625,5 @@ function CitaManual({ inicial, today, onClose, onCreada }) {
         </div>
       </RegistrationForm>
     </Modal>
-  );
-}
-
-function CorreosPanel({ aviso }) {
-  const [estado, setEstado] = useState(null);
-
-  const cargar = useCallback(async () => {
-    const { ok, data } = await adminApi("/api/admin/correos");
-    if (ok) setEstado(data);
-    else aviso(errorMessage(data));
-  }, [aviso]);
-
-  useEffect(() => { cargar(); }, [cargar]);
-
-  async function enviarPendientes() {
-    const { ok, data } = await adminApi("/api/admin/correos", { method: "POST" });
-    if (!ok) { aviso(errorMessage(data)); return; }
-    aviso(data.sinTransporte
-      ? "El envío de correos aún no está configurado en el servidor."
-      : `${data.enviados} correo(s) enviados · ${data.fallidos} con error.`);
-    await cargar();
-  }
-
-  if (!estado) return <p className="muted" style={{ padding: 16, fontSize: 14 }}>Cargando…</p>;
-
-  const pendientes = estado.correos.filter((c) => c.estado !== "ENVIADO").length;
-  const etiqueta = { PENDIENTE: "En cola", ENVIADO: "Enviado", ERROR: "Error" };
-
-  return (
-    <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-      {!estado.transporteConfigurado && (
-        <p className="notice">
-          El envío real aún no está configurado: los correos quedan en cola aquí y se enviarán cuando se active (EMAIL_TRANSPORT).
-        </p>
-      )}
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span className="muted" style={{ fontSize: 13, marginRight: "auto" }}>{estado.correos.length} correo(s) · {pendientes} sin enviar</span>
-        <button type="button" className="btn btn-secondary btn-sm" disabled={!pendientes} onClick={enviarPendientes}>Enviar pendientes</button>
-      </div>
-      {estado.correos.length === 0 && <p className="muted" style={{ fontSize: 14, textAlign: "center", padding: 16 }}>Aún no hay correos.</p>}
-      <div>
-        {estado.correos.map((c) => (
-          <details key={c.id} className="mail">
-            <summary>
-              <span style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12 }}>
-                <span className="muted">{c.cuando} · {c.caso}</span>
-                <span style={{ fontWeight: 600, color: c.estado === "ERROR" ? "#a51d1d" : c.estado === "ENVIADO" ? "#14532d" : "#6b4a00" }}>{etiqueta[c.estado]}</span>
-              </span>
-              <span style={{ fontWeight: 600, fontSize: 14 }}>{c.asunto}</span>
-              <span className="muted mono" style={{ fontSize: 12 }}>Para: {c.destinatario}</span>
-            </summary>
-            <p style={{ fontSize: 13, padding: "0 2px 12px" }}>{c.cuerpo}</p>
-            {c.ultimo_error && <p className="err" style={{ paddingBottom: 12 }}>Último error: {c.ultimo_error}</p>}
-          </details>
-        ))}
-      </div>
-    </div>
   );
 }
