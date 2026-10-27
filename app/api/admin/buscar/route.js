@@ -1,5 +1,7 @@
 import { searchAppointments } from "../../../../lib/db/agenda-repository.mjs";
-import { adminRoute, getCipher, getPool, json } from "../../../../lib/server/admin-route.mjs";
+import { getPool } from "../../../../lib/db/pool.mjs";
+import { adminRoute, getCipher } from "../../../../lib/server/admin-route.mjs";
+import { json } from "../../../../lib/server/http.mjs";
 
 export const dynamic = "force-dynamic";
 

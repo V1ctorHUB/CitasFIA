@@ -1,6 +1,8 @@
 import { createProjects, listProjectsForAdmin } from "../../../../lib/db/projects-repository.mjs";
 import { cleanText, MAX_IMPORT_ROWS, validateProject } from "../../../../lib/projects.mjs";
-import { adminRoute, getPool, json, readBody } from "../../../../lib/server/admin-route.mjs";
+import { getPool } from "../../../../lib/db/pool.mjs";
+import { adminRoute, readBody } from "../../../../lib/server/admin-route.mjs";
+import { json } from "../../../../lib/server/http.mjs";
 
 export const dynamic = "force-dynamic";
 
@@ -18,10 +20,9 @@ export const POST = adminRoute(async (request, { session }) => {
   }
 
   const proyectos = items.map((item) => ({ nombre: cleanText(item?.nombre), institucion: cleanText(item?.institucion) }));
-  const invalido = proyectos.findIndex((proyecto) => Object.keys(validateProject(proyecto)).length > 0);
-  if (invalido >= 0) {
-    return json({ error: `El proyecto ${invalido + 1} no es válido.`, errors: validateProject(proyectos[invalido]) }, 400);
-  }
+  const errores = proyectos.map(validateProject);
+  const invalido = errores.findIndex((errors) => Object.keys(errors).length > 0);
+  if (invalido >= 0) return json({ error: `El proyecto ${invalido + 1} no es válido.`, errors: errores[invalido] }, 400);
 
   try {
     return json(await createProjects(getPool(), proyectos, { actor: session.usuario }));

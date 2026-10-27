@@ -1,8 +1,5 @@
 "use client";
 
-import { GENDER_OPTIONS } from "../../lib/registration-form.mjs";
-
-export const GENERO_LABEL = Object.fromEntries(GENDER_OPTIONS.map(({ value, label }) => [value, label]));
 export const ORIGEN_LABEL = { FORMULARIO: "Formulario público", MANUAL: "Cita manual" };
 
 /**

@@ -39,8 +39,6 @@ input[readonly] { background: #f8fafc; color: var(--muted); cursor: not-allowed;
 .input-error { border-color: #ba2424; }
 .input-error:focus { outline-color: rgb(186 36 36 / 20%); border-color: #ba2424; }
 .field-error { margin: 0; color: #a51d1d; font-size: .85rem; line-height: 1.35; }
-.field-hint { margin: 0; color: var(--muted); font-size: .83rem; line-height: 1.35; word-break: break-all; }
-.field-hint strong { color: var(--uca-blue); }
 fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
 .egreso-select-group { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; }
 .autocomplete-dropdown { position: absolute; z-index: 10; top: calc(100% - 6px); right: 0; left: 0; max-height: 240px; margin: 0; padding: 6px 0; overflow-y: auto; list-style: none; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 12px 28px rgb(20 41 80 / 16%); }

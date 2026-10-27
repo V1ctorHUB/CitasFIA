@@ -15,8 +15,8 @@ import {
   parseIsoDate,
   todayInElSalvador,
 } from "../../lib/agenda.mjs";
-import { createIdempotencyKey, enviarSolicitud } from "../../lib/registration-form.mjs";
-import { adminApi, errorMessage, GENERO_LABEL, ORIGEN_LABEL } from "./api";
+import { createIdempotencyKey, enviarSolicitud, GENDER_LABELS } from "../../lib/registration-form.mjs";
+import { adminApi, errorMessage, ORIGEN_LABEL } from "./api";
 
 function weekLabel(lunes) {
   const viernes = addDays(lunes, 4);
@@ -53,6 +53,14 @@ function Modal({ labelledBy, onClose, maxWidth, role = "dialog", children }) {
         {children}
       </div>
     </div>
+  );
+}
+
+function CloseButton({ onClick }) {
+  return (
+    <button type="button" className="btn btn-ghost btn-icon" onClick={onClick} aria-label="Cerrar">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+    </button>
   );
 }
 
@@ -148,9 +156,8 @@ export default function AgendaView() {
     await cargar();
   }
 
-  const citasSemana = agenda.citas;
-  const nPend = citasSemana.filter((c) => c.estado === "PENDIENTE_CONFIRMACION").length;
-  const nConf = citasSemana.filter((c) => c.estado === "CONFIRMADA").length;
+  const nPend = agenda.citas.filter((c) => c.estado === "PENDIENTE_CONFIRMACION").length;
+  const nConf = agenda.citas.filter((c) => c.estado === "CONFIRMADA").length;
 
   return (
     <main style={{ flex: 1, width: "100%", maxWidth: 1440, margin: "0 auto", padding: "20px 24px 48px", display: "flex", flexWrap: "wrap", gap: 20, alignItems: "flex-start" }}>
@@ -265,11 +272,11 @@ export default function AgendaView() {
             </span>
           ))}
           <span className="muted" style={{ marginLeft: "auto" }}>
-            {citasSemana.length} cita(s) · {nPend} por confirmar · {nConf} confirmada(s)
+            {agenda.citas.length} cita(s) · {nPend} por confirmar · {nConf} confirmada(s)
           </span>
         </div>
 
-        {!cargando && citasSemana.length === 0 && (
+        {!cargando && agenda.citas.length === 0 && (
           <p role="status" style={{ padding: "12px 16px", border: "1px solid #dbe2ee", background: "#fff", borderRadius: 10, fontWeight: 600, color: "#123c8c" }}>
             Agenda libre en esta semana
           </p>
@@ -298,7 +305,7 @@ export default function AgendaView() {
                 key={hora}
                 hora={hora}
                 diasIso={diasIso}
-                citas={citasSemana}
+                citas={agenda.citas}
                 today={today}
                 bloqueado={bloqueado}
                 enMano={enMano}
@@ -482,9 +489,7 @@ function Detalle({ cita, hoy, onClose, onAccion, onMover }) {
             <span className="muted">· {formatLongDate(cita.fecha)} · {cita.hora} h · {ORIGEN_LABEL[cita.origen]}</span>
           </span>
         </div>
-        <button type="button" className="btn btn-ghost btn-icon" onClick={onClose} aria-label="Cerrar">
-          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
-        </button>
+        <CloseButton onClick={onClose} />
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 18, padding: "16px 0", borderTop: "1px solid #eef1f6", borderBottom: "1px solid #eef1f6" }}>
@@ -495,7 +500,7 @@ function Detalle({ cita, hoy, onClose, onAccion, onMover }) {
             <dt>Correo</dt><dd className="mono">{cita.correo}</dd>
             <dt>DUI</dt><dd className="mono">{cita.dui}</dd>
             <dt>Teléfono</dt><dd className="mono">{cita.telefono ?? "—"}</dd>
-            <dt>Género</dt><dd>{GENERO_LABEL[cita.genero]}</dd>
+            <dt>Género</dt><dd>{GENDER_LABELS[cita.genero]}</dd>
           </dl>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -589,9 +594,7 @@ function CitaManual({ inicial, today, onClose, onCreada }) {
           <h3 id="manual-titulo" style={{ fontSize: 22 }}>Nueva cita manual</h3>
           <p className="muted" style={{ fontSize: 14 }}>Para estudiantes atendidos en persona o por teléfono. Queda Confirmada y no envía correo.</p>
         </div>
-        <button type="button" className="btn btn-ghost btn-icon" onClick={onClose} aria-label="Cerrar">
-          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
-        </button>
+        <CloseButton onClick={onClose} />
       </div>
       <RegistrationForm onSubmit={registrar} submitLabel="Registrar cita manual">
         <div className="egreso-select-group full-width">

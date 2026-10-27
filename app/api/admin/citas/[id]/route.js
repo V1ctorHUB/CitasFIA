@@ -1,6 +1,8 @@
 import { ACCIONES } from "../../../../../lib/agenda.mjs";
 import { getHistory, performAction } from "../../../../../lib/db/agenda-repository.mjs";
-import { actionResponse, adminRoute, deliverEmailsInBackground, getPool, json, readBody } from "../../../../../lib/server/admin-route.mjs";
+import { getPool } from "../../../../../lib/db/pool.mjs";
+import { actionResponse, adminRoute, deliverEmailsInBackground, readBody } from "../../../../../lib/server/admin-route.mjs";
+import { json } from "../../../../../lib/server/http.mjs";
 
 export const dynamic = "force-dynamic";
 

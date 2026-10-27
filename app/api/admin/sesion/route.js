@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { clientKey, json } from "../../../../lib/server/http.mjs";
 import { createRateLimiter } from "../../../../lib/server/rate-limit.mjs";
 import { createSessionToken, loadAdminConfig, SESSION_COOKIE, SESSION_MAX_AGE_SECONDS, verifyPassword } from "../../../../lib/server/admin-session.mjs";
 import { isSameOrigin, readJsonBody } from "../../../../lib/server/registration-request.mjs";
@@ -7,14 +7,6 @@ export const dynamic = "force-dynamic";
 
 // Frena la adivinación de contraseñas sin bloquear a la coordinación por un par de errores.
 const rateLimiter = createRateLimiter({ limit: 10, windowMs: 15 * 60 * 1000 });
-
-function json(body, status) {
-  return NextResponse.json(body, { status, headers: { "Cache-Control": "no-store" } });
-}
-
-function clientKey(request) {
-  return request.headers.get("x-forwarded-for")?.split(",")[0].trim() || "sin-ip";
-}
 
 const cookieOptions = (maxAge) => ({
   httpOnly: true,
@@ -34,10 +26,7 @@ export async function POST(request) {
 
   const { allowed, retryAfterSeconds } = rateLimiter.consume(clientKey(request));
   if (!allowed) {
-    return NextResponse.json({ error: "Demasiados intentos. Espera unos minutos." }, {
-      status: 429,
-      headers: { "Cache-Control": "no-store", "Retry-After": String(retryAfterSeconds) },
-    });
+    return json({ error: "Demasiados intentos. Espera unos minutos." }, 429, { "Retry-After": String(retryAfterSeconds) });
   }
 
   const body = await readJsonBody(request, 1024);
@@ -49,7 +38,7 @@ export async function POST(request) {
   const passwordOk = await verifyPassword(clave, config.claveHash);
   if (!passwordOk || usuario !== config.usuario) return json({ error: "Usuario o contraseña incorrectos." }, 401);
 
-  const response = json({ ok: true }, 200);
+  const response = json({ ok: true });
   response.cookies.set(SESSION_COOKIE, createSessionToken(config.usuario, config.secret), cookieOptions(SESSION_MAX_AGE_SECONDS));
   return response;
 }
@@ -57,7 +46,7 @@ export async function POST(request) {
 export async function DELETE(request) {
   if (!isSameOrigin(request, process.env.APP_ORIGIN)) return json({ error: "Origen no permitido." }, 403);
 
-  const response = json({ ok: true }, 200);
+  const response = json({ ok: true });
   response.cookies.set(SESSION_COOKIE, "", cookieOptions(0));
   return response;
 }

@@ -88,10 +88,6 @@ export default function RegistrationForm({ onSubmit, onEdit, submitLabel = "Regi
     };
   }
 
-  function edited() {
-    onEdit?.();
-  }
-
   function clearErrors(...names) {
     setFieldErrors((current) => ({
       ...current,
@@ -109,14 +105,14 @@ export default function RegistrationForm({ onSubmit, onEdit, submitLabel = "Regi
 
     setRegistrationValue(name, format ? format(value) : value);
     clearErrors(name === "ciclo" || name === "anio" ? "cicloEgreso" : name);
-    edited();
+    onEdit?.();
   }
 
   function updateProjectQuery(query) {
     setProjectQuery(query);
     setSelectedProject(null);
     clearErrors("proyecto");
-    edited();
+    onEdit?.();
   }
 
   function selectProject(project) {
@@ -134,7 +130,7 @@ export default function RegistrationForm({ onSubmit, onEdit, submitLabel = "Regi
     setCareerQuery(query);
     setRegistrationValue("carrera", "");
     clearErrors("carrera");
-    edited();
+    onEdit?.();
   }
 
   function selectCareer(career) {

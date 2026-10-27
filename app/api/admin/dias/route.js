@@ -1,6 +1,8 @@
 import { isValidIsoDate } from "../../../../lib/agenda.mjs";
 import { setDayBlocked } from "../../../../lib/db/agenda-repository.mjs";
-import { adminRoute, getPool, json, readBody } from "../../../../lib/server/admin-route.mjs";
+import { getPool } from "../../../../lib/db/pool.mjs";
+import { adminRoute, readBody } from "../../../../lib/server/admin-route.mjs";
+import { json } from "../../../../lib/server/http.mjs";
 
 export const dynamic = "force-dynamic";
 

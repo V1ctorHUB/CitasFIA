@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
 import { createDuiCipher } from "../../../lib/db/dui-crypto.mjs";
 import { getPool } from "../../../lib/db/pool.mjs";
 import { listActiveProjects } from "../../../lib/db/projects-repository.mjs";
 import { createRegistration } from "../../../lib/db/registrations-repository.mjs";
+import { clientKey, json } from "../../../lib/server/http.mjs";
 import { createRateLimiter } from "../../../lib/server/rate-limit.mjs";
 import { isSameOrigin, parseRegistrationRequest, readJsonBody } from "../../../lib/server/registration-request.mjs";
 
@@ -12,20 +12,9 @@ export const dynamic = "force-dynamic";
 const rateLimiter = createRateLimiter({ limit: 30, windowMs: 10 * 60 * 1000 });
 let duiCipher;
 
-const NO_STORE = { "Cache-Control": "no-store" };
-
 // Mensaje genérico: no revela si un carnet o DUI ya existe (evita enumeración).
 const CONFLICT_MESSAGE = "No fue posible registrar la solicitud con los datos proporcionados. "
   + "Si ya enviaste una solicitud, espera el correo de la coordinación.";
-
-function json(body, status, headers = {}) {
-  return NextResponse.json(body, { status, headers: { ...NO_STORE, ...headers } });
-}
-
-// Detrás de Caddy/Nginx la IP real llega en X-Forwarded-For; el proxy debe sobrescribirla.
-function clientKey(request) {
-  return request.headers.get("x-forwarded-for")?.split(",")[0].trim() || "sin-ip";
-}
 
 export async function POST(request) {
   if (!isSameOrigin(request, process.env.APP_ORIGIN)) {

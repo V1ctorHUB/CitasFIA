@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { addDays, formatLongDate, formatShortDate, isoDate, mondayOf, parseIsoDate, todayInElSalvador } from "../../../lib/agenda.mjs";
 import { aplicarFiltros, contar, DIMENSIONES, excelXml, resumen, seleccionar } from "../../../lib/dashboard.mjs";
-import { GENDER_OPTIONS } from "../../../lib/registration-form.mjs";
-import { adminApi, errorMessage, GENERO_LABEL } from "../api";
+import { GENDER_LABELS, GENDER_OPTIONS } from "../../../lib/registration-form.mjs";
+import { adminApi, errorMessage } from "../api";
 
 const ORDEN_GENERO = GENDER_OPTIONS.map(({ value }) => value);
 const ORDEN_ASISTENCIA = ["ASISTIO", "NO_ASISTIO", "POR_REALIZAR"];
@@ -251,7 +251,7 @@ function GeneroDonut({ filas, seleccion, onElegir }) {
               <li key={f.valor}>
                 <button type="button" className={elegido ? "legend-row bar-row-on" : "legend-row"} aria-pressed={elegido} onClick={(event) => onElegir(f.valor, event)}>
                   <i aria-hidden="true" style={{ width: 12, height: 12, borderRadius: 3, background: color(f.valor), flex: "none" }} />
-                  <span style={{ flex: 1, fontWeight: elegido ? 700 : 400 }}>{GENERO_LABEL[f.valor]}</span>
+                  <span style={{ flex: 1, fontWeight: elegido ? 700 : 400 }}>{GENDER_LABELS[f.valor]}</span>
                   <span className="muted" style={{ fontVariantNumeric: "tabular-nums" }}>{f.n} · {f.pct}%</span>
                 </button>
               </li>
@@ -288,7 +288,7 @@ function Tabla({ citas, filtrosTexto }) {
                 <td className="mono">{c.caso}</td><td>{formatShortDate(c.fecha)}</td><td>{c.hora}</td>
                 <td>{DIMENSIONES.asistencia.etiqueta(DIMENSIONES.asistencia.valor(c))}</td>
                 <td>{c.nombreCompleto}</td><td className="mono">{c.carnet}</td><td className="mono">{c.telefono ?? "—"}</td>
-                <td>{GENERO_LABEL[c.genero]}</td><td>{c.carrera}</td><td>{c.facultad}</td><td>{c.ciclo_egreso}</td>
+                <td>{GENDER_LABELS[c.genero]}</td><td>{c.carrera}</td><td>{c.facultad}</td><td>{c.ciclo_egreso}</td>
                 <td>{c.proyecto}</td><td>{c.institucion}</td>
               </tr>
             ))}

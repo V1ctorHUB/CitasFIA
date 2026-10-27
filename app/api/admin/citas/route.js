@@ -1,6 +1,8 @@
 import { createManualAppointment } from "../../../../lib/db/agenda-repository.mjs";
 import { listActiveProjects } from "../../../../lib/db/projects-repository.mjs";
-import { actionResponse, adminRoute, getCipher, getPool, json, readBody } from "../../../../lib/server/admin-route.mjs";
+import { getPool } from "../../../../lib/db/pool.mjs";
+import { actionResponse, adminRoute, getCipher, readBody } from "../../../../lib/server/admin-route.mjs";
+import { json } from "../../../../lib/server/http.mjs";
 import { parseRegistrationRequest } from "../../../../lib/server/registration-request.mjs";
 
 export const dynamic = "force-dynamic";
