@@ -84,6 +84,19 @@
   body { background: #fff; }
 }
 
-.bar-row:hover { background: #f4f7fd !important; }
+/* Dashboard estilo Power BI: cada gráfico es también un filtro. */
+.filter-bar { position: sticky; top: 8px; z-index: 5; padding: 10px 14px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-height: 48px; box-shadow: 0 4px 14px rgb(20 41 80 / 6%); }
+.chip { min-height: 30px; padding: 0 10px; border: 1px solid #b3c3e4; border-radius: 999px; background: #edf3ff; color: #123c8c; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; }
+.chip:hover { background: #dfe9fb; }
+.chart { padding: 18px; display: flex; flex-direction: column; gap: 10px; transition: box-shadow .15s ease; }
+.chart-activo { box-shadow: inset 0 0 0 2px #123c8c; }
+.bar-row, .legend-row { width: 100%; border: 0; border-radius: 6px; background: transparent; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.bar-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(64px, 1fr) 32px; align-items: center; gap: 10px; font-size: 13px; padding: 6px; }
+.legend-row { display: flex; align-items: center; gap: 10px; font-size: 14px; padding: 6px 8px; }
+.bar-row:hover, .legend-row:hover { background: #f4f7fd; }
+.bar-row-on, .bar-row-on:hover { background: #edf3ff; }
+.donut-slice { cursor: pointer; outline: none; transition: fill .15s ease; }
+.donut-slice:hover { opacity: .85; }
+.donut-slice:focus-visible { outline: none; stroke: #192033; stroke-width: 3; }
 .print-only { display: none; }
 @media print { .print-only { display: block; } }

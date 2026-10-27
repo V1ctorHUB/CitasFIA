@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { addDays, formatLongDate, formatShortDate, isoDate, mondayOf, parseIsoDate, todayInElSalvador } from "../../../lib/agenda.mjs";
-import { alternarFiltro, aplicarFiltros, contar, DIMENSIONES, excelXml, resumen } from "../../../lib/dashboard.mjs";
+import { aplicarFiltros, contar, DIMENSIONES, excelXml, resumen, seleccionar } from "../../../lib/dashboard.mjs";
 import { GENDER_OPTIONS } from "../../../lib/registration-form.mjs";
 import { adminApi, errorMessage, GENERO_LABEL } from "../api";
 
@@ -11,7 +11,13 @@ const ORDEN_ASISTENCIA = ["ASISTIO", "NO_ASISTIO", "POR_REALIZAR"];
 // Paleta categórica validada (orden fijo: el color sigue al género, nunca a su posición).
 const COLOR_GENERO = { femenino: "#2a78d6", masculino: "#eb6834", otro: "#1baf7a", "prefiero-no-indicarlo": "#eda100" };
 const ATENUADO = "#dbe2ee";
-const DIMS_INTERACTIVAS = ["genero", "asistencia", "facultad", "carrera", "proyecto", "egreso"];
+const GRAFICOS_BARRAS = [
+  ["asistencia", "Asistencia"],
+  ["facultad", "Citas por facultad"],
+  ["carrera", "Citas por carrera"],
+  ["proyecto", "Demanda de proyectos"],
+  ["egreso", "Ciclo de egreso"],
+];
 
 function descargar(contenido, nombre) {
   const url = URL.createObjectURL(new Blob([contenido], { type: "application/vnd.ms-excel" }));
@@ -45,11 +51,11 @@ export default function Dashboard() {
 
   const todas = citas ?? [];
   const filtradas = aplicarFiltros(todas, filtros);
-  const general = resumen(todas);
-  const filtrado = resumen(filtradas);
+  const kpis = resumen(filtradas);
   const chips = Object.entries(filtros).flatMap(([dim, valores]) => valores.map((valor) => ({ dim, valor })));
-  const alternar = (dim) => (valor) => setFiltros((actual) => alternarFiltro(actual, dim, valor));
-  // Cada gráfico interactivo se calcula con los filtros de las demás dimensiones.
+  // Ctrl/⌘ + clic agrega valores; un clic simple deja solo ese valor (como en Power BI).
+  const elegir = (dim) => (valor, event) => setFiltros((actual) => seleccionar(actual, dim, valor, Boolean(event?.ctrlKey || event?.metaKey)));
+  // Cada gráfico se calcula con los filtros de los DEMÁS gráficos: así sigue mostrando sus otras opciones.
   const filasDe = (dim, orden) => contar(aplicarFiltros(todas, filtros, dim), dim, orden);
 
   const presets = [
@@ -61,9 +67,10 @@ export default function Dashboard() {
   const rangoLabel = desde || hasta
     ? `Periodo: ${desde ? formatLongDate(desde) : "inicio"} → ${hasta ? formatLongDate(hasta) : "sin límite"}`
     : "Periodo: todos los registros";
+  const filtrosTexto = chips.map(({ dim, valor }) => `${DIMENSIONES[dim].titulo}: ${DIMENSIONES[dim].etiqueta(valor)}`).join(" · ");
 
   return (
-    <main style={{ flex: 1, width: "100%", maxWidth: 1440, margin: "0 auto", padding: "24px 24px 56px", display: "flex", flexDirection: "column", gap: 20 }}>
+    <main style={{ flex: 1, width: "100%", maxWidth: 1440, margin: "0 auto", padding: "24px 24px 56px", display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: "14px 16px" }}>
         <div style={{ marginRight: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
           <p className="eyebrow">Inteligencia de negocios</p>
@@ -94,83 +101,51 @@ export default function Dashboard() {
         {error && <span className="err" role="alert">{error}</span>}
       </div>
 
-      {/* ─── Resumen general: todo el periodo, sin filtros ─── */}
-      <section aria-labelledby="general-titulo" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <div>
-          <h2 id="general-titulo" style={{ fontSize: 18, fontWeight: 600 }}>Resumen general del periodo</h2>
-          <p className="muted" style={{ fontSize: 13 }}>Todas las citas de las fechas seleccionadas. No cambia al aplicar filtros.</p>
-        </div>
-        <Kpis r={general} />
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: 16, alignItems: "start" }}>
-          <GeneroDonut titulo="Género" filas={contar(todas, "genero", ORDEN_GENERO)} total={todas.length} />
-          <Barras titulo="Facultad" filas={contar(todas, "facultad")} />
-          <Barras titulo="Asistencia" filas={contar(todas, "asistencia", ORDEN_ASISTENCIA)} />
-        </div>
-      </section>
-
-      {/* ─── Análisis interactivo: filtros cruzados ─── */}
-      <section aria-labelledby="interactivo-titulo" style={{ display: "flex", flexDirection: "column", gap: 12, paddingTop: 8, borderTop: "1px solid #dbe2ee" }}>
-        <div>
-          <h2 id="interactivo-titulo" style={{ fontSize: 18, fontWeight: 600 }}>Análisis interactivo</h2>
-          <p className="muted" style={{ fontSize: 13 }}>Haz clic en cualquier barra o categoría para filtrar todo el tablero. Vuelve a hacer clic para quitar el filtro.</p>
-        </div>
-
-        <div className="no-print" role="status" style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", minHeight: 32 }}>
-          {chips.length === 0 ? (
-            <span className="muted" style={{ fontSize: 13 }}>Sin filtros: se muestran las {todas.length} citas del periodo.</span>
-          ) : (
-            <>
-              <span className="muted" style={{ fontSize: 13 }}>Filtros:</span>
-              {chips.map(({ dim, valor }) => (
-                <button key={`${dim}-${valor}`} type="button" className="btn btn-secondary btn-sm" onClick={() => alternar(dim)(valor)} aria-label={`Quitar filtro ${DIMENSIONES[dim].titulo}: ${DIMENSIONES[dim].etiqueta(valor)}`}>
-                  <span className="muted">{DIMENSIONES[dim].titulo}:</span> {DIMENSIONES[dim].etiqueta(valor)} <span aria-hidden="true">×</span>
-                </button>
-              ))}
-              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setFiltros({})}>Limpiar filtros</button>
-            </>
-          )}
-        </div>
-        {/* Para el PDF: los chips no se imprimen, los filtros sí deben constar. */}
-        {chips.length > 0 && (
-          <p className="print-only" style={{ fontSize: 13 }}>
-            Filtros aplicados: {chips.map(({ dim, valor }) => `${DIMENSIONES[dim].titulo}: ${DIMENSIONES[dim].etiqueta(valor)}`).join(" · ")}
-          </p>
+      {/* Barra de filtros fija arriba mientras se recorre el tablero. */}
+      <div className="panel filter-bar no-print" role="status">
+        {chips.length === 0 ? (
+          <span className="muted" style={{ fontSize: 13 }}>
+            Haz clic en cualquier gráfico para filtrar todo el tablero · Ctrl/⌘ + clic para elegir varios · clic de nuevo para quitar.
+          </span>
+        ) : (
+          <>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>Filtrado:</span>
+            {chips.map(({ dim, valor }) => (
+              <button key={`${dim}-${valor}`} type="button" className="chip" onClick={() => elegir(dim)(valor, { ctrlKey: true })} aria-label={`Quitar filtro ${DIMENSIONES[dim].titulo}: ${DIMENSIONES[dim].etiqueta(valor)}`}>
+                <span className="muted">{DIMENSIONES[dim].titulo}:</span> {DIMENSIONES[dim].etiqueta(valor)} <span aria-hidden="true">×</span>
+              </button>
+            ))}
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setFiltros({})}>Limpiar filtros</button>
+            <span className="muted" style={{ fontSize: 13, marginLeft: "auto" }}>{filtradas.length} de {todas.length} citas</span>
+          </>
         )}
+      </div>
+      {chips.length > 0 && <p className="print-only" style={{ fontSize: 13 }}>Filtros aplicados: {filtrosTexto}</p>}
 
-        <Kpis r={filtrado} base={chips.length ? general.total : null} />
+      <Kpis r={kpis} />
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 340px), 1fr))", gap: 16, alignItems: "start" }}>
-          {DIMS_INTERACTIVAS.map((dim) => (dim === "genero" ? (
-            <GeneroDonut
-              key={dim}
-              titulo="Distribución por género"
-              filas={filasDe("genero", ORDEN_GENERO)}
-              total={aplicarFiltros(todas, filtros, "genero").length}
-              seleccion={filtros.genero ?? []}
-              onToggle={alternar("genero")}
-            />
-          ) : (
-            <Barras
-              key={dim}
-              titulo={DIMENSIONES[dim].titulo === "Proyecto" ? "Demanda de proyectos" : `Citas por ${DIMENSIONES[dim].titulo.toLowerCase()}`}
-              filas={filasDe(dim, dim === "asistencia" ? ORDEN_ASISTENCIA : null).filter((f) => f.n > 0 || (filtros[dim] ?? []).includes(f.valor))}
-              seleccion={filtros[dim] ?? []}
-              onToggle={alternar(dim)}
-            />
-          )))}
-        </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 340px), 1fr))", gap: 16, alignItems: "start" }}>
+        <GeneroDonut filas={filasDe("genero", ORDEN_GENERO)} seleccion={filtros.genero ?? []} onElegir={elegir("genero")} />
+        {GRAFICOS_BARRAS.map(([dim, titulo]) => (
+          <Barras
+            key={dim}
+            titulo={titulo}
+            filas={filasDe(dim, dim === "asistencia" ? ORDEN_ASISTENCIA : null).filter((f) => f.n > 0 || (filtros[dim] ?? []).includes(f.valor))}
+            seleccion={filtros[dim] ?? []}
+            onElegir={elegir(dim)}
+          />
+        ))}
+      </div>
 
-        <Tabla citas={filtradas} />
-      </section>
+      <Tabla citas={filtradas} filtrosTexto={filtrosTexto} />
     </main>
   );
 }
 
-function Kpis({ r, base = null }) {
-  const de = base === null ? "en el periodo" : `de ${base} del periodo`;
+function Kpis({ r }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 12 }}>
-      <div className="panel kpi"><span className="muted" style={{ fontSize: 13 }}>Citas agendadas</span><span className="kpi-n">{r.total}</span><span className="muted" style={{ fontSize: 12 }}>{de}</span></div>
+      <div className="panel kpi"><span className="muted" style={{ fontSize: 13 }}>Citas agendadas</span><span className="kpi-n">{r.total}</span><span className="muted" style={{ fontSize: 12 }}>con los filtros actuales</span></div>
       <div className="panel kpi"><span className="muted" style={{ fontSize: 13 }}>Asistieron</span><span className="kpi-n" style={{ color: "#14532d" }}>{r.asistio}</span><span className="muted" style={{ fontSize: 12 }}>marcadas como Asistió</span></div>
       <div className="panel kpi"><span className="muted" style={{ fontSize: 13 }}>No asistieron</span><span className="kpi-n">{r.noAsistio}</span><span className="muted" style={{ fontSize: 12 }}>solo con fines estadísticos</span></div>
       <div className="panel kpi"><span className="muted" style={{ fontSize: 13 }}>Por realizar</span><span className="kpi-n">{r.porRealizar}</span><span className="muted" style={{ fontSize: 12 }}>asignadas o confirmadas</span></div>
@@ -184,40 +159,31 @@ function Kpis({ r, base = null }) {
   );
 }
 
-/** Lista de barras horizontales. Con `onToggle` cada fila es un botón que filtra el tablero. */
-function Barras({ titulo, filas, seleccion = [], onToggle }) {
+/** Barras horizontales; cada barra es un botón que filtra el tablero. */
+function Barras({ titulo, filas, seleccion, onElegir }) {
   const max = Math.max(1, ...filas.map(({ n }) => n));
   const haySeleccion = seleccion.length > 0;
 
   return (
-    <section className="panel" style={{ padding: 18, display: "flex", flexDirection: "column", gap: 6 }}>
-      <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>{titulo}</h3>
+    <section className={haySeleccion ? "panel chart chart-activo" : "panel chart"}>
+      <h3 style={{ fontSize: 16, fontWeight: 600 }}>{titulo}</h3>
       {filas.length === 0 && <p className="muted" style={{ fontSize: 13 }}>Sin datos.</p>}
       <div style={{ display: "flex", flexDirection: "column", gap: 2, maxHeight: 330, overflowY: "auto" }}>
         {filas.map((f) => {
           const elegido = seleccion.includes(f.valor);
-          const contenido = (
-            <>
-              <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: elegido ? 700 : 400 }}>{f.etiqueta}</span>
-              <span className="bar-track"><span className="bar-fill" style={{ display: "block", width: `${Math.round((100 * f.n) / max)}%`, background: haySeleccion && !elegido ? ATENUADO : "#123c8c" }} /></span>
-              <span className="muted" style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{f.n}</span>
-            </>
-          );
-          const estilo = { display: "grid", gridTemplateColumns: "minmax(0, 1.4fr) minmax(64px, 1fr) 32px", alignItems: "center", gap: 10, fontSize: 13, padding: "6px 6px", borderRadius: 6 };
-          return onToggle ? (
+          return (
             <button
               key={f.valor}
               type="button"
-              className="bar-row"
+              className={elegido ? "bar-row bar-row-on" : "bar-row"}
               aria-pressed={elegido}
               title={`${f.etiqueta}: ${f.n} cita(s) · ${f.pct}%`}
-              onClick={() => onToggle(f.valor)}
-              style={{ ...estilo, border: 0, background: elegido ? "#edf3ff" : "transparent", font: "inherit", color: "inherit", textAlign: "left", cursor: "pointer" }}
+              onClick={(event) => onElegir(f.valor, event)}
             >
-              {contenido}
+              <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: elegido ? 700 : 400 }}>{f.etiqueta}</span>
+              <span className="bar-track"><span className="bar-fill" style={{ display: "block", width: `${Math.round((100 * f.n) / max)}%`, background: haySeleccion && !elegido ? ATENUADO : "#123c8c" }} /></span>
+              <span className="muted" style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{f.n}</span>
             </button>
-          ) : (
-            <div key={f.valor} title={`${f.etiqueta}: ${f.n} cita(s) · ${f.pct}%`} style={estilo}>{contenido}</div>
           );
         })}
       </div>
@@ -225,47 +191,69 @@ function Barras({ titulo, filas, seleccion = [], onToggle }) {
   );
 }
 
-function GeneroDonut({ titulo, filas, total, seleccion = [], onToggle }) {
+const R_EXT = 80;
+const R_INT = 50;
+
+function punto(r, grados) {
+  const rad = ((grados - 90) * Math.PI) / 180;
+  return `${80 + r * Math.cos(rad)} ${80 + r * Math.sin(rad)}`;
+}
+
+// Porción de dona entre dos ángulos; una porción de 360° se dibuja en dos mitades.
+function porcion(desde, hasta) {
+  if (hasta - desde >= 359.99) return `${porcion(0, 180)} ${porcion(180, 360)}`;
+  const grande = hasta - desde > 180 ? 1 : 0;
+  return `M ${punto(R_EXT, desde)} A ${R_EXT} ${R_EXT} 0 ${grande} 1 ${punto(R_EXT, hasta)} L ${punto(R_INT, hasta)} A ${R_INT} ${R_INT} 0 ${grande} 0 ${punto(R_INT, desde)} Z`;
+}
+
+function GeneroDonut({ filas, seleccion, onElegir }) {
+  const total = filas.reduce((suma, { n }) => suma + n, 0);
   const haySeleccion = seleccion.length > 0;
   const color = (valor) => (haySeleccion && !seleccion.includes(valor) ? ATENUADO : COLOR_GENERO[valor]);
+  const elegidas = filas.filter(({ valor }) => seleccion.includes(valor)).reduce((suma, { n }) => suma + n, 0);
   let acumulado = 0;
-  const tramos = filas.filter(({ n }) => n).map(({ valor, n }) => {
-    const inicio = acumulado;
-    acumulado += (360 * n) / total;
-    return `${color(valor)} ${inicio}deg ${acumulado}deg`;
-  });
 
   return (
-    <section className="panel" style={{ padding: 18, display: "flex", flexDirection: "column", gap: 16 }}>
-      <h3 style={{ fontSize: 16, fontWeight: 600 }}>{titulo}</h3>
+    <section className={haySeleccion ? "panel chart chart-activo" : "panel chart"}>
+      <h3 style={{ fontSize: 16, fontWeight: 600 }}>Distribución por género</h3>
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 24 }}>
-        <div
-          role="img"
-          aria-label={`Distribución por género: ${filas.map((f) => `${f.etiqueta} ${f.n}`).join(", ")}`}
-          style={{ width: 160, height: 160, borderRadius: "50%", background: tramos.length ? `conic-gradient(${tramos.join(", ")})` : "#edf0f5", position: "relative", flex: "none" }}
-        >
-          <div style={{ position: "absolute", inset: 32, borderRadius: "50%", background: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontSize: 24, fontWeight: 600 }}>{total}</span><span className="muted" style={{ fontSize: 12 }}>citas</span>
-          </div>
-        </div>
-        <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 4, flex: 1, minWidth: 170 }}>
+        <svg viewBox="0 0 160 160" width="160" height="160" role="group" aria-label="Distribución por género" style={{ flex: "none" }}>
+          {total === 0 && <circle cx="80" cy="80" r={(R_EXT + R_INT) / 2} fill="none" stroke="#edf0f5" strokeWidth={R_EXT - R_INT} />}
+          {filas.filter(({ n }) => n).map((f) => {
+            const desde = acumulado;
+            acumulado += (360 * f.n) / total;
+            return (
+              <path
+                key={f.valor}
+                d={porcion(desde, acumulado)}
+                fill={color(f.valor)}
+                stroke="#fff"
+                strokeWidth="2"
+                className="donut-slice"
+                role="button"
+                tabIndex={0}
+                aria-pressed={seleccion.includes(f.valor)}
+                aria-label={`${f.etiqueta}: ${f.n} cita(s), ${f.pct}%`}
+                onClick={(event) => onElegir(f.valor, event)}
+                onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onElegir(f.valor, event); } }}
+              >
+                <title>{`${f.etiqueta}: ${f.n} cita(s) · ${f.pct}%`}</title>
+              </path>
+            );
+          })}
+          <text x="80" y="80" textAnchor="middle" fontSize="24" fontWeight="600" fill="#192033">{haySeleccion ? elegidas : total}</text>
+          <text x="80" y="98" textAnchor="middle" fontSize="12" fill="#5b667d">{haySeleccion ? `de ${total}` : "citas"}</text>
+        </svg>
+        <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 2, flex: 1, minWidth: 170 }}>
           {filas.map((f) => {
             const elegido = seleccion.includes(f.valor);
-            const contenido = (
-              <>
-                <i aria-hidden="true" style={{ width: 12, height: 12, borderRadius: 3, background: color(f.valor), flex: "none" }} />
-                <span style={{ flex: 1, fontWeight: elegido ? 700 : 400 }}>{GENERO_LABEL[f.valor]}</span>
-                <span className="muted" style={{ fontVariantNumeric: "tabular-nums" }}>{f.n} · {f.pct}%</span>
-              </>
-            );
-            const estilo = { display: "flex", alignItems: "center", gap: 10, fontSize: 14, width: "100%", padding: "6px 8px", borderRadius: 6 };
             return (
               <li key={f.valor}>
-                {onToggle ? (
-                  <button type="button" aria-pressed={elegido} onClick={() => onToggle(f.valor)} style={{ ...estilo, border: 0, background: elegido ? "#edf3ff" : "transparent", font: "inherit", color: "inherit", textAlign: "left", cursor: "pointer" }}>
-                    {contenido}
-                  </button>
-                ) : <div style={estilo}>{contenido}</div>}
+                <button type="button" className={elegido ? "legend-row bar-row-on" : "legend-row"} aria-pressed={elegido} onClick={(event) => onElegir(f.valor, event)}>
+                  <i aria-hidden="true" style={{ width: 12, height: 12, borderRadius: 3, background: color(f.valor), flex: "none" }} />
+                  <span style={{ flex: 1, fontWeight: elegido ? 700 : 400 }}>{GENERO_LABEL[f.valor]}</span>
+                  <span className="muted" style={{ fontVariantNumeric: "tabular-nums" }}>{f.n} · {f.pct}%</span>
+                </button>
               </li>
             );
           })}
@@ -275,14 +263,16 @@ function GeneroDonut({ titulo, filas, total, seleccion = [], onToggle }) {
   );
 }
 
-function Tabla({ citas }) {
+function Tabla({ citas, filtrosTexto }) {
   const filas = [...citas].sort((a, b) => `${a.fecha}${a.hora}`.localeCompare(`${b.fecha}${b.hora}`));
 
   return (
     <section className="panel" style={{ padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "6px 12px" }}>
         <h3 style={{ fontSize: 16, fontWeight: 600 }}>Registros</h3>
-        <span className="muted" style={{ fontSize: 13 }}>{filas.length} registro(s) · lo que se exporta a Excel</span>
+        <span className="muted" style={{ fontSize: 13 }}>
+          {filas.length} registro(s){filtrosTexto ? ` · ${filtrosTexto}` : ""} · es lo que se exporta a Excel
+        </span>
       </div>
       <div style={{ overflow: "auto", maxHeight: 420, border: "1px solid #eef1f6", borderRadius: 8 }}>
         <table className="tbl">
