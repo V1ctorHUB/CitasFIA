@@ -24,6 +24,7 @@ h1 { margin: 0; font-size: clamp(1.7rem, 4vw, 2.35rem); letter-spacing: -.035em;
 
 .success-message { margin: 24px 0 0; padding: 14px 16px; border-radius: 8px; background: var(--success-bg); color: var(--success); font-weight: 600; }
 .registration-form { display: flex; flex-direction: column; gap: 1.35rem; margin-top: 28px; }
+.name-phone-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 1.25rem; align-items: start; }
 .compact-three-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; align-items: start; position: relative; padding-bottom: 24px; }
 .field { display: grid; gap: 8px; align-content: start; }
 .carnet-field { position: relative; }
@@ -59,7 +60,7 @@ button:disabled { background: #6b7a99; cursor: progress; transform: none; }
   .registration-card { padding: 24px 20px; border-radius: 12px; }
   .brand-header { align-items: flex-start; gap: 14px; }
   .brand-header img { width: 50px; }
-  .compact-three-row { grid-template-columns: 1fr; padding-bottom: 0; }
+  .compact-three-row, .name-phone-row { grid-template-columns: 1fr; padding-bottom: 0; }
   .carnet-email-hint { position: static; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .egreso-select-group { grid-template-columns: 1fr; }
 }

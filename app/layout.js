@@ -2,7 +2,7 @@ import "./globals.css";
 
 export const metadata = {
   title: "Registro de Cita | Servicio Social UCA",
-  description: "Formulario de registro para citas de Servicio Social UCA.",
+  description: "Registro y administración de citas de Servicio Social UCA.",
 };
 
 export default function RootLayout({ children }) {
