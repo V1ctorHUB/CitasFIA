@@ -20,7 +20,8 @@
     "nodemailer": "10.1.4",
     "pg": "8.23.1",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "read-excel-file": "9.3.12"
   },
   "engines": {
     "node": ">=22"
