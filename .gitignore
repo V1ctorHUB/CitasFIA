@@ -60,6 +60,3 @@ graphify-out/
 # --- Documentación local (no se versiona) ---
 *.md
 *.MD
-
-# --- Panel local de administración (solo desarrollo, nunca se versiona) ---
-app/admin-local/
