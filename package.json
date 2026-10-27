@@ -11,7 +11,9 @@
     "db:migrate": "node scripts/db-migrate.mjs",
     "db:status": "node scripts/db-migrate.mjs status",
     "db:backup": "scripts/backup.sh",
-    "db:verify-backup": "scripts/verify-backup.sh"
+    "db:verify-backup": "scripts/verify-backup.sh",
+    "admin:clave": "node scripts/admin-clave.mjs",
+    "db:seed-demo": "node --env-file=.env scripts/seed-demo.mjs"
   },
   "dependencies": {
     "next": "16.4.0",

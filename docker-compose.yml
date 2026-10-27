@@ -60,6 +60,11 @@ services:
       APP_ORIGIN: ${APP_ORIGIN:?Define APP_ORIGIN en .env}
       DUI_ENCRYPTION_KEY: ${DUI_ENCRYPTION_KEY:?Define DUI_ENCRYPTION_KEY en .env}
       DUI_HASH_KEY: ${DUI_HASH_KEY:?Define DUI_HASH_KEY en .env}
+      ADMIN_USUARIO: ${ADMIN_USUARIO:?Define ADMIN_USUARIO en .env}
+      ADMIN_NOMBRE: ${ADMIN_NOMBRE:-}
+      ADMIN_CLAVE_HASH: ${ADMIN_CLAVE_HASH:?Define ADMIN_CLAVE_HASH en .env (npm run admin:clave)}
+      SESSION_SECRET: ${SESSION_SECRET:?Define SESSION_SECRET en .env (npm run admin:clave)}
+      EMAIL_TRANSPORT: ${EMAIL_TRANSPORT:-}
       TZ: America/El_Salvador
     depends_on:
       migrate:
