@@ -1,0 +1,80 @@
+# Despliegue on-premise en la laptop-servidor: docker compose up -d --build
+name: citas-servicio-social
+
+services:
+  db:
+    image: postgres:16-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-citas}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}
+      OWNER_DB_PASSWORD: ${OWNER_DB_PASSWORD:?Define OWNER_DB_PASSWORD en .env}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?Define APP_DB_PASSWORD en .env}
+      # Checksums de página: detectan corrupción silenciosa del disco.
+      POSTGRES_INITDB_ARGS: --data-checksums --auth-host=scram-sha-256
+      TZ: America/El_Salvador
+    command:
+      - postgres
+      - -c
+      - fsync=on
+      - -c
+      - synchronous_commit=on
+      - -c
+      - full_page_writes=on
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - log_min_duration_statement=500
+      - -c
+      - timezone=America/El_Salvador
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    # Solo accesible desde la propia laptop (respaldos/mantenimiento), nunca desde la red.
+    ports:
+      # 5433 en el host: el 5432 lo ocupa un PostgreSQL local (Homebrew) en la laptop de desarrollo.
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    stop_grace_period: 60s
+
+  migrate:
+    image: citas-app:local
+    build: .
+    command: ["node", "scripts/db-migrate.mjs"]
+    environment:
+      DATABASE_ADMIN_URL: postgres://citas_owner:${OWNER_DB_PASSWORD}@db:5432/${POSTGRES_DB:-citas}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    image: citas-app:local
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://citas_app:${APP_DB_PASSWORD}@db:5432/${POSTGRES_DB:-citas}
+      APP_ORIGIN: ${APP_ORIGIN:?Define APP_ORIGIN en .env}
+      DUI_ENCRYPTION_KEY: ${DUI_ENCRYPTION_KEY:?Define DUI_ENCRYPTION_KEY en .env}
+      DUI_HASH_KEY: ${DUI_HASH_KEY:?Define DUI_HASH_KEY en .env}
+      ADMIN_USUARIO: ${ADMIN_USUARIO:?Define ADMIN_USUARIO en .env}
+      ADMIN_NOMBRE: ${ADMIN_NOMBRE:-}
+      ADMIN_CLAVE_HASH: ${ADMIN_CLAVE_HASH:?Define ADMIN_CLAVE_HASH en .env (npm run admin:clave)}
+      SESSION_SECRET: ${SESSION_SECRET:?Define SESSION_SECRET en .env (npm run admin:clave)}
+      ZOHO_CORREO: ${ZOHO_CORREO:-}
+      ZOHO_CLAVE: ${ZOHO_CLAVE:-}
+      ZOHO_SMTP_HOST: ${ZOHO_SMTP_HOST:-}
+      TZ: America/El_Salvador
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    # El proxy HTTPS (Caddy) corre en la misma laptop y reenvía a este puerto.
+    ports:
+      - "127.0.0.1:3000:3000"
+
+volumes:
+  pgdata:

@@ -1,0 +1,12 @@
+# Proxy HTTPS en la laptop-servidor. Reemplaza el dominio por el que asigne la UCA/TI.
+# Con un dominio público Caddy obtiene certificados automáticamente; en red interna usa "tls internal".
+citas.ejemplo.uca.edu.sv {
+	encode gzip
+	reverse_proxy 127.0.0.1:3000 {
+		# Sobrescribe X-Forwarded-For con la IP real: el limitador de solicitudes depende de ello.
+		header_up X-Forwarded-For {remote_host}
+	}
+	# Las rutas administrativas (futuro /admin) solo por Tailscale (RNF-1.1/1.2).
+	@admin path /admin*
+	respond @admin 404
+}

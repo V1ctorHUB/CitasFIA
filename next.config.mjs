@@ -28,6 +28,9 @@ const securityHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   poweredByHeader: false,
+  // Servidor autocontenido (.next/standalone) para desplegar en la laptop-servidor con Docker o Node.
+  output: "standalone",
+  serverExternalPackages: ["pg", "nodemailer"],
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

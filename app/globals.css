@@ -24,6 +24,7 @@ h1 { margin: 0; font-size: clamp(1.7rem, 4vw, 2.35rem); letter-spacing: -.035em;
 
 .success-message { margin: 24px 0 0; padding: 14px 16px; border-radius: 8px; background: var(--success-bg); color: var(--success); font-weight: 600; }
 .registration-form { display: flex; flex-direction: column; gap: 1.35rem; margin-top: 28px; }
+.name-phone-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 1.25rem; align-items: start; }
 .compact-three-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; align-items: start; position: relative; padding-bottom: 24px; }
 .field { display: grid; gap: 8px; align-content: start; }
 .carnet-field { position: relative; }
@@ -38,26 +39,26 @@ input[readonly] { background: #f8fafc; color: var(--muted); cursor: not-allowed;
 .input-error { border-color: #ba2424; }
 .input-error:focus { outline-color: rgb(186 36 36 / 20%); border-color: #ba2424; }
 .field-error { margin: 0; color: #a51d1d; font-size: .85rem; line-height: 1.35; }
-.field-hint { margin: 0; color: var(--muted); font-size: .83rem; line-height: 1.35; word-break: break-all; }
-.field-hint strong { color: var(--uca-blue); }
 fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
 .egreso-select-group { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; }
 .autocomplete-dropdown { position: absolute; z-index: 10; top: calc(100% - 6px); right: 0; left: 0; max-height: 240px; margin: 0; padding: 6px 0; overflow-y: auto; list-style: none; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 12px 28px rgb(20 41 80 / 16%); }
-.autocomplete-item { display: grid; width: 100%; gap: 3px; border: 0; border-radius: 0; background: transparent; color: var(--ink); padding: 11px 14px; text-align: left; }
+.autocomplete-item { display: grid; width: 100%; gap: 3px; border: 0; border-radius: 0; background: transparent; color: var(--ink); padding: 11px 14px; text-align: left; font: inherit; cursor: pointer; }
 .autocomplete-item:hover, .autocomplete-item:focus { background: #edf3ff; color: var(--uca-blue); transform: none; outline: none; }
 .item-title { font-weight: 700; }
 .item-subtitle, .autocomplete-empty { color: var(--muted); font-size: .83rem; }
 .autocomplete-empty { padding: 12px 14px; }
-button { min-height: 48px; border: 0; border-radius: 8px; background: var(--uca-blue); color: #fff; cursor: pointer; font: inherit; font-weight: 700; transition: background .15s ease, transform .15s ease; }
-button:hover { background: #0d3177; }
-button:active { transform: translateY(1px); }
+.registration-form > button[type="submit"] { min-height: 48px; border: 0; border-radius: 8px; background: var(--uca-blue); color: #fff; cursor: pointer; font: inherit; font-weight: 700; transition: background .15s ease, transform .15s ease; }
+.registration-form > button[type="submit"]:hover { background: #0d3177; }
+.registration-form > button[type="submit"]:active { transform: translateY(1px); }
+.registration-form > button[type="submit"]:disabled { background: #6b7a99; cursor: progress; transform: none; }
+.submit-error { margin: 0; padding: 14px 16px; border-radius: 8px; background: #fdecec; color: #a12020; font-weight: 600; }
 
 @media (max-width: 640px) {
   .page-shell { padding: 20px 12px; }
   .registration-card { padding: 24px 20px; border-radius: 12px; }
   .brand-header { align-items: flex-start; gap: 14px; }
   .brand-header img { width: 50px; }
-  .compact-three-row { grid-template-columns: 1fr; padding-bottom: 0; }
+  .compact-three-row, .name-phone-row { grid-template-columns: 1fr; padding-bottom: 0; }
   .carnet-email-hint { position: static; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .egreso-select-group { grid-template-columns: 1fr; }
 }
