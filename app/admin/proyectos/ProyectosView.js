@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { readSheet } from "read-excel-file/browser";
 import { PROJECT_TEXT_MAX, rowsToProjects, validateProject } from "../../../lib/projects.mjs";
 import { adminApi, errorMessage } from "../api";
+import { IconoMas } from "../icons";
 
 function resultadoTexto({ creados, existentes }) {
   const partes = [`${creados} proyecto(s) agregado(s)`];
@@ -39,12 +40,11 @@ export default function ProyectosView() {
     <main style={{ flex: 1, width: "100%", maxWidth: 1100, margin: "0 auto", padding: "24px 24px 56px", display: "flex", flexDirection: "column", gap: 18 }}>
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 12 }}>
         <div style={{ marginRight: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
-          <p className="eyebrow">Catálogo del formulario</p>
-          <h1 style={{ fontSize: 26, letterSpacing: "-0.02em" }}>Proyectos de horas sociales</h1>
+          <h1 style={{ fontSize: 30 }}>Proyectos de horas sociales</h1>
           <p className="muted" style={{ fontSize: 14 }}>Los proyectos activos aparecen en el buscador del formulario público.</p>
         </div>
         <button type="button" className={modo === "manual" ? "btn btn-secondary" : "btn btn-primary"} aria-expanded={modo === "manual"} onClick={() => { setModo(modo === "manual" ? null : "manual"); setMensaje(""); }}>
-          + Agregar proyecto
+          <IconoMas /> Agregar proyecto
         </button>
         <button type="button" className="btn btn-secondary" aria-expanded={modo === "excel"} onClick={() => { setModo(modo === "excel" ? null : "excel"); setMensaje(""); }}>
           Importar desde Excel

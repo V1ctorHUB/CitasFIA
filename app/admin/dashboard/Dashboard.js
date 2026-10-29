@@ -10,7 +10,8 @@ import { adminApi, errorMessage } from "../api";
 
 const ORDEN_GENERO = GENDER_OPTIONS.map(({ value }) => value);
 // Paleta categórica validada (orden fijo: el color sigue al género, nunca a su posición).
-const COLOR_GENERO = { femenino: "#2a78d6", masculino: "#eb6834", otro: "#1baf7a", "prefiero-no-indicarlo": "#eda100" };
+// Derivada de la marca y separada por luminosidad, no por tono de librería; la leyenda lleva el texto.
+const COLOR_GENERO = { femenino: "#123c8c", masculino: "#a8741a", otro: "#5b8bd0", "prefiero-no-indicarlo": "#8a93a5" };
 // Mismos colores que la agenda para cada estado de asistencia.
 const COLOR_ASISTENCIA = { ASISTIO: "#1f8a4c", NO_ASISTIO: "#8a93a5", POR_REALIZAR: "#123c8c" };
 const ATENUADO = "#dbe2ee";
@@ -130,7 +131,7 @@ export default function Dashboard() {
     setGenerandoPdf(true);
     try {
       await descargarPdf(graficosRef.current, {
-        titulo: "Reporte de citas de servicio social",
+        titulo: "Informe de servicio social",
         // Las fuentes estándar del PDF no tienen "→".
         detalle: [rangoLabel.replace("→", "a"), filtrosTexto && `Filtros: ${filtrosTexto}`, `${filtradas.length} cita(s)`].filter(Boolean).join(" · "),
         nombre: nombreArchivo("pdf"),
@@ -146,8 +147,7 @@ export default function Dashboard() {
     <main style={{ flex: 1, width: "100%", maxWidth: 1440, margin: "0 auto", padding: "24px 24px 56px", display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: "14px 16px" }}>
         <div style={{ marginRight: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
-          <p className="eyebrow">Inteligencia de negocios</p>
-          <h1 style={{ fontSize: 26, letterSpacing: "-0.02em" }}>Reporte de citas de servicio social</h1>
+          <h1 style={{ fontSize: 30 }}>Informe de servicio social</h1>
           <p className="muted" style={{ fontSize: 14 }}>{rangoLabel}</p>
         </div>
         <div className="field"><label htmlFor="desde">Desde</label><input id="desde" type="date" value={desde} onChange={(e) => setDesde(e.target.value)} style={{ minHeight: 40 }} /></div>
@@ -418,9 +418,10 @@ function Ocupacion({ dias, horas, filtros, elegir }) {
   return (
     <Tarjeta titulo="¿Qué días y horas se piden más?" nota="Citas del periodo (% del total)" activo={(filtros.diaSemana ?? []).length + (filtros.hora ?? []).length > 0} lg={6} md={12}>
       <p style={{ margin: 0, fontSize: 13 }}>
-        {diaPico
+        {/* Cada lista ignora su propio filtro: con un día u hora sin citas, solo una de las dos tiene pico. */}
+        {diaPico && horaPico
           ? <>Lo más pedido: <strong>{diaPico.etiqueta}</strong> ({diaPico.n} {diaPico.n === 1 ? "cita" : "citas"}, {parte(diaPico.n)}%) y las <strong>{horaPico.etiqueta}</strong> ({horaPico.n} {horaPico.n === 1 ? "cita" : "citas"}, {parte(horaPico.n)}%).</>
-          : <span className="muted">Sin citas en el periodo.</span>}
+          : <span className="muted">Sin citas con estos filtros.</span>}
       </p>
       <div className="ocup-grid">
         {bloque("Por día", dias, "diaSemana")}

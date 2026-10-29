@@ -40,8 +40,7 @@ export default function AdminLogin() {
       <form className="panel login-card" noValidate onSubmit={login}>
         <Image src="/Logo_UCA_2015.jpg" alt="Universidad Centroamericana José Simeón Cañas" width={52} height={71} />
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <p className="eyebrow">Aplicación de administración</p>
-          <h1 style={{ fontSize: 24, letterSpacing: "-0.02em" }}>Acceso de coordinación</h1>
+          <h1 style={{ fontSize: 28 }}>Acceso de coordinación</h1>
           <p className="muted" style={{ fontSize: 14 }}>Solo para la Coordinación de Servicio Social.</p>
         </div>
         <div className="field">

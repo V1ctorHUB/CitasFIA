@@ -1,12 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import RegistrationForm from "../components/RegistrationForm";
 import {
   addDays,
   DIAS,
   ESTADOS,
+  ALMUERZO,
+  CIERRE,
   formatLongDate,
+  isValidIsoDate,
   HORAS,
   isMovable,
   isoDate,
@@ -17,6 +20,9 @@ import {
 } from "../../lib/agenda.mjs";
 import { createIdempotencyKey, enviarSolicitud, GENDER_LABELS } from "../../lib/registration-form.mjs";
 import { adminApi, errorMessage, ORIGEN_LABEL } from "./api";
+import { IconoCheck, IconoMas } from "./icons";
+
+const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
 
 function weekLabel(lunes) {
   const viernes = addDays(lunes, 4);
@@ -31,28 +37,33 @@ function Modal({ labelledBy, onClose, maxWidth, role = "dialog", children }) {
   closeRef.current = onClose;
 
   useEffect(() => {
-    ref.current?.focus();
-    // En el documento: tras deshabilitarse un botón el foco sale del diálogo y Escape debe seguir cerrándolo.
-    const onKey = (event) => { if (event.key === "Escape") closeRef.current(); };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    const dialog = ref.current;
+    const origen = document.activeElement;
+    // showModal deja inerte el resto de la página: Tab no puede salir del diálogo.
+    dialog.showModal();
+    dialog.focus();
+    return () => {
+      dialog.close();
+      // Al cerrar, el foco vuelve a quien abrió el diálogo (si sigue en pantalla).
+      if (origen?.isConnected) origen.focus();
+    };
   }, []);
 
   return (
-    <div className="overlay" onClick={onClose}>
-      <div
-        ref={ref}
-        tabIndex={-1}
-        className="dialog"
-        role={role}
-        aria-modal="true"
-        aria-labelledby={labelledBy}
-        onClick={(event) => event.stopPropagation()}
-        style={{ maxWidth, outline: "none" }}
-      >
+    <dialog
+      ref={ref}
+      tabIndex={-1}
+      className="overlay"
+      role={role === "dialog" ? undefined : role}
+      aria-labelledby={labelledBy}
+      // Escape: el estado de React decide el cierre, no el navegador.
+      onCancel={(event) => { event.preventDefault(); closeRef.current(); }}
+      onClick={(event) => { if (event.target === event.currentTarget) closeRef.current(); }}
+    >
+      <div className="dialog" style={{ maxWidth }}>
         {children}
       </div>
-    </div>
+    </dialog>
   );
 }
 
@@ -79,6 +90,7 @@ export default function AgendaView() {
   const [manual, setManual] = useState(null);
   const [toast, setToast] = useState("");
   const toastTimer = useRef(0);
+  const calRef = useRef(null);
 
   const lunes = addDays(baseMonday, 7 * semana);
   const diasIso = [0, 1, 2, 3, 4].map((i) => isoDate(addDays(lunes, i)));
@@ -117,6 +129,13 @@ export default function AgendaView() {
     return () => { activo = false; window.clearTimeout(timer); };
   }, [busqueda, agenda]);
   useEffect(() => () => window.clearTimeout(toastTimer.current), []);
+  // En pantallas angostas el calendario se desplaza de lado: se abre mostrando la columna de hoy.
+  useEffect(() => {
+    const caja = calRef.current;
+    const hoy = caja?.querySelector(".dayhead-hoy");
+    // 64px = columna de horas, que queda fija encima al desplazar.
+    if (hoy && caja.scrollWidth > caja.clientWidth) caja.scrollLeft += hoy.getBoundingClientRect().left - caja.getBoundingClientRect().left - 64;
+  }, [semana, cargando]);
 
   async function accion(cita, body) {
     const { ok, data } = await adminApi(`/api/admin/citas/${cita.id}`, { method: "POST", body });
@@ -151,7 +170,7 @@ export default function AgendaView() {
     aviso(!bloquear
       ? "Día reabierto para agendar citas."
       : data.citasEseDia
-        ? `Día desactivado. Tiene ${data.citasEseDia} cita(s): muévelas a otro día para notificar a los estudiantes.`
+        ? `Día desactivado. Tiene ${plural(data.citasEseDia, "cita", "citas")}: muévelas a otro día para notificar a los estudiantes.`
         : "Día desactivado: no se podrán agendar citas en esa fecha.");
     await cargar();
   }
@@ -163,7 +182,7 @@ export default function AgendaView() {
     <main style={{ flex: 1, width: "100%", maxWidth: 1440, margin: "0 auto", padding: "20px 24px 48px", display: "flex", flexWrap: "wrap", gap: 20, alignItems: "flex-start" }}>
       <aside className="panel agenda-aside" aria-label="Solicitudes">
         <div style={{ padding: "14px 16px 10px", display: "flex", flexDirection: "column", gap: 10, borderBottom: "1px solid #eef1f6" }}>
-          <h2 style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 16, color: "#123c8c" }}>
+          <h2 style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 17 }}>
             Solicitudes <span className="badge">{agenda.solicitudes.length}</span>
           </h2>
           <div style={{ position: "relative" }}>
@@ -182,7 +201,7 @@ export default function AgendaView() {
           </div>
           <p className="muted" style={{ fontSize: 13 }}>
             {resultados
-              ? `${resultados.length} resultado(s) para “${busqueda.trim()}”.`
+              ? `${plural(resultados.length, "resultado", "resultados")} para “${busqueda.trim()}”.`
               : enMano
                 ? `Haz clic en un horario libre para ubicar a ${enMano.nombreCompleto}. Vuelve a hacer clic en la tarjeta para cancelar.`
                 : "Arrastra una solicitud al calendario, o selecciónala y elige un horario."}
@@ -192,7 +211,7 @@ export default function AgendaView() {
         <div className="agenda-aside-list" role="list">
           {!resultados && !cargando && agenda.solicitudes.length === 0 && (
             <p className="muted" style={{ fontSize: 14, padding: "24px 8px", textAlign: "center", border: "1px dashed #d3dae6", borderRadius: 10 }}>
-              No hay solicitudes sin horario.
+              Bandeja al día: ninguna solicitud espera horario.
             </p>
           )}
           {resultados && resultados.length === 0 && (
@@ -231,7 +250,7 @@ export default function AgendaView() {
               <span style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12 }}>
                 <span className="mono muted">{s.caso}</span>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                  <i aria-hidden="true" style={{ width: 8, height: 8, borderRadius: "50%", background: ESTADOS[s.estado].dot === "#ffffff" ? "#123c8c" : ESTADOS[s.estado].dot }} />
+                  <i aria-hidden="true" style={{ width: 8, height: 8, borderRadius: "50%", background: ESTADOS[s.estado].dot }} />
                   {ESTADOS[s.estado].label}
                 </span>
               </span>
@@ -254,13 +273,13 @@ export default function AgendaView() {
               <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
             </button>
           </div>
-          <h2 style={{ fontSize: 18, fontWeight: 600, marginRight: "auto" }}>{weekLabel(lunes)}</h2>
+          <h2 style={{ fontSize: 20, marginRight: "auto" }}>{weekLabel(lunes)}</h2>
           <button
             type="button"
             className="btn btn-primary"
             onClick={() => setManual({ fecha: diasIso.find((f) => f >= today && !bloqueado(f)) ?? "", hora: "" })}
           >
-            + Nueva cita manual
+            <IconoMas /> Nueva cita manual
           </button>
         </div>
 
@@ -272,7 +291,7 @@ export default function AgendaView() {
             </span>
           ))}
           <span className="muted" style={{ marginLeft: "auto" }}>
-            {agenda.citas.length} cita(s) · {nPend} por confirmar · {nConf} confirmada(s)
+            {plural(agenda.citas.length, "cita", "citas")} · {nPend} por confirmar · {plural(nConf, "confirmada", "confirmadas")}
           </span>
         </div>
 
@@ -282,15 +301,15 @@ export default function AgendaView() {
           </p>
         )}
 
-        <div className="panel" style={{ overflowX: "auto" }}>
+        <div className="panel" ref={calRef} style={{ overflowX: "auto" }}>
           <div className="cal">
-            <div />
+            <div className="cal-hora" />
             {diasIso.map((iso, i) => {
               const bq = bloqueado(iso);
-              const color = bq ? "#8a93a5" : iso === today ? "#123c8c" : "#192033";
+              const color = bq ? "#8a93a5" : iso === today ? "#8a5d10" : "#192033";
               return (
-                <div key={iso} className="dayhead">
-                  <span style={{ fontSize: 12, color, fontWeight: 600 }}>{DIAS[i]}</span>
+                <div key={iso} className={iso === today ? "dayhead dayhead-hoy" : "dayhead"}>
+                  <span style={{ fontSize: 12, color, fontWeight: 600 }}>{DIAS[i]}{iso === today && " · hoy"}</span>
                   <span style={{ fontSize: 20, fontWeight: 600, color, textDecoration: bq ? "line-through" : "none" }}>{parseIsoDate(iso).getDate()}</span>
                   {iso >= today && (
                     <button type="button" className="linkbtn" onClick={() => toggleDia(iso)} aria-pressed={bq}>
@@ -301,26 +320,35 @@ export default function AgendaView() {
               );
             })}
             {HORAS.map((hora) => (
-              <Fila
-                key={hora}
-                hora={hora}
-                diasIso={diasIso}
-                citas={agenda.citas}
-                today={today}
-                bloqueado={bloqueado}
-                enMano={enMano}
-                drag={drag}
-                onAbrir={(c) => setDetId(c.id)}
-                onClickLibre={(fecha) => (enMano ? ubicar(enMano, fecha, hora) : setManual({ fecha, hora }))}
-                onDrop={(fecha) => {
-                  if (!drag) return;
-                  if (drag.estado === "SOLICITADA") ubicar(drag, fecha, hora);
-                  else pedirMovimiento(drag, fecha, hora);
-                }}
-                onDragStart={(c) => { setDrag(c); setSel(null); }}
-                onDragEnd={() => setDrag(null)}
-              />
+              <Fragment key={hora}>
+                {hora === ALMUERZO.hasta && (
+                  <>
+                    <div className="muted cal-hora cal-pausa-hora">{ALMUERZO.desde}</div>
+                    <div className="cal-pausa">Almuerzo · {ALMUERZO.desde} – {ALMUERZO.hasta}</div>
+                  </>
+                )}
+                <Fila
+                  hora={hora}
+                  diasIso={diasIso}
+                  citas={agenda.citas}
+                  today={today}
+                  bloqueado={bloqueado}
+                  enMano={enMano}
+                  drag={drag}
+                  onAbrir={(c) => setDetId(c.id)}
+                  onClickLibre={(fecha) => (enMano ? ubicar(enMano, fecha, hora) : setManual({ fecha, hora }))}
+                  onDrop={(fecha) => {
+                    if (!drag) return;
+                    if (drag.estado === "SOLICITADA") ubicar(drag, fecha, hora);
+                    else pedirMovimiento(drag, fecha, hora);
+                  }}
+                  onDragStart={(c) => { setDrag(c); setSel(null); }}
+                  onDragEnd={() => setDrag(null)}
+                />
+              </Fragment>
             ))}
+            <div className="muted cal-hora cal-pausa-hora">{CIERRE}</div>
+            <div className="cal-cierre">Fin de la jornada</div>
           </div>
         </div>
       </section>
@@ -380,7 +408,8 @@ export default function AgendaView() {
         />
       )}
 
-      {toast && <div className="toast" role="status">{toast}</div>}
+      {/* popover: el aviso sube a la capa superior y se ve aunque haya un diálogo modal abierto. */}
+      {toast && <div className="toast" role="status" popover="manual" ref={(el) => { if (el && !el.matches(":popover-open")) el.showPopover(); }}>{toast}</div>}
     </main>
   );
 }
@@ -388,7 +417,7 @@ export default function AgendaView() {
 function Fila({ hora, diasIso, citas, today, bloqueado, enMano, drag, onAbrir, onClickLibre, onDrop, onDragStart, onDragEnd }) {
   return (
     <>
-      <div className="muted" style={{ fontSize: 12, padding: "8px 8px 0 0", textAlign: "right", borderTop: "1px solid #e3e8f1" }}>{hora}</div>
+      <div className="muted cal-hora" style={{ fontSize: 12, padding: "8px 8px 0 0", textAlign: "right", borderTop: "1px solid #e3e8f1" }}>{hora}</div>
       {diasIso.map((fecha, i) => {
         const cita = citas.find((c) => c.fecha === fecha && c.hora === hora) ?? null;
         const estado = cita ? ESTADOS[cita.estado] : null;
@@ -423,10 +452,10 @@ function Fila({ hora, diasIso, citas, today, bloqueado, enMano, drag, onAbrir, o
               >
                 <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
                   <i aria-hidden="true" style={{ flex: "none", width: 7, height: 7, borderRadius: "50%", background: estado.dot }} />
-                  <span style={{ fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{cita.nombreCompleto}</span>
+                  <span title={cita.nombreCompleto} style={{ fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{cita.nombreCompleto}</span>
                 </span>
-                <span className="mono" style={{ fontSize: 11, opacity: 0.85 }}>{cita.caso}</span>
-                <span style={{ fontSize: 11, opacity: 0.85 }}>{estado.label}</span>
+                <span className="mono" style={{ fontSize: 12, opacity: 0.85, whiteSpace: "nowrap" }}>{cita.caso}</span>
+                <span style={{ fontSize: 12 }}>{estado.label}</span>
               </button>
             )}
             {!cita && !bq && (
@@ -437,7 +466,7 @@ function Fila({ hora, diasIso, citas, today, bloqueado, enMano, drag, onAbrir, o
                 onClick={() => onClickLibre(fecha)}
                 aria-label={enMano ? `Ubicar a ${enMano.nombreCompleto} el ${dia}` : `Nueva cita manual el ${dia}`}
               >
-                <span className={enMano ? "" : "slot-plus"}>{enMano ? "Ubicar aquí" : "+ Cita manual"}</span>
+                <span className={enMano ? "" : "slot-plus"}>{enMano ? "Ubicar aquí" : <><IconoMas /> Cita manual</>}</span>
               </button>
             )}
             {!cita && bq && hora === HORAS[0] && <span className="muted" style={{ fontSize: 12, padding: 6 }}>Día desactivado</span>}
@@ -472,11 +501,14 @@ function Detalle({ cita, hoy, onClose, onAccion, onMover }) {
     if (ok && cerrar) onClose();
   }
 
+  const antesDeLaCita = cita.fecha > hoy;
   const ayuda = cita.estado === "PENDIENTE_CONFIRMACION"
-    ? "Cuando el estudiante confirme, presiona Confirmado; si pide otra hora, mueve la cita."
+    ? "Cuando el estudiante responda el correo, márcala como confirmada; si pide otra hora, reprográmala."
     : cita.estado === "CONFIRMADA"
-      ? "Después de la sesión registra Asistió o No asistió. La inasistencia es solo estadística: no bloquea al estudiante para futuras solicitudes."
-      : "Registro cerrado; cuenta para el Dashboard BI. Puedes corregir la asistencia si fue un error.";
+      ? antesDeLaCita
+        ? `La asistencia se registra desde el ${formatLongDate(cita.fecha)}.`
+        : "Registra si el estudiante asistió. La inasistencia es solo estadística: no le impide volver a solicitar."
+      : "Registro cerrado; cuenta para el Informe.";
 
   return (
     <Modal labelledBy="det-titulo" maxWidth={760} onClose={onClose}>
@@ -530,11 +562,24 @@ function Detalle({ cita, hoy, onClose, onAccion, onMover }) {
         </div>
       )}
 
+      {/* Solo las acciones que el estado permite (mismas reglas que lib/db/agenda-repository.mjs). */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-        <button type="button" className="btn btn-primary" disabled={ocupado || cita.estado !== "PENDIENTE_CONFIRMACION"} onClick={() => ejecutar({ accion: "confirmar" })}>✓ Confirmado</button>
-        <button type="button" className="btn btn-ok" disabled={ocupado || cita.fecha > hoy || !["CONFIRMADA", "NO_ASISTIO"].includes(cita.estado)} onClick={() => ejecutar({ accion: "asistio" }, true)}>Asistió</button>
-        <button type="button" className="btn btn-secondary" disabled={ocupado || cita.fecha > hoy || !["CONFIRMADA", "ASISTIO"].includes(cita.estado)} onClick={() => ejecutar({ accion: "no_asistio" }, true)}>No asistió</button>
-        <button type="button" className="btn btn-ghost" disabled={ocupado || !movible} onClick={() => ejecutar({ accion: "reenviar" })}>Reenviar correo</button>
+        {cita.estado === "PENDIENTE_CONFIRMACION" && (
+          <button type="button" className="btn btn-primary" disabled={ocupado} onClick={() => ejecutar({ accion: "confirmar" })}><IconoCheck /> Marcar confirmada</button>
+        )}
+        {cita.estado === "CONFIRMADA" && !antesDeLaCita && (
+          <>
+            <button type="button" className="btn btn-primary" disabled={ocupado} onClick={() => ejecutar({ accion: "asistio" }, true)}><IconoCheck /> Asistió</button>
+            <button type="button" className="btn btn-secondary" disabled={ocupado} onClick={() => ejecutar({ accion: "no_asistio" }, true)}>No asistió</button>
+          </>
+        )}
+        {movible && <button type="button" className="btn btn-ghost" disabled={ocupado} onClick={() => ejecutar({ accion: "reenviar" })}>Reenviar correo</button>}
+        {!movible && (
+          <button type="button" className="linkbtn" style={{ fontSize: 14 }} disabled={ocupado}
+            onClick={() => ejecutar(cita.estado === "ASISTIO" ? { accion: "no_asistio" } : { accion: "asistio" }, true)}>
+            Corregir: marcar como {cita.estado === "ASISTIO" ? "No asistió" : "Asistió"}
+          </button>
+        )}
         <span style={{ flex: 1 }} />
         {!confirmaBorrado && movible && <button type="button" className="btn btn-danger" onClick={() => setConfirmaBorrado(true)}>Eliminar cita</button>}
       </div>
@@ -569,12 +614,29 @@ function Detalle({ cita, hoy, onClose, onAccion, onMover }) {
 function CitaManual({ inicial, today, onClose, onCreada }) {
   const [slot, setSlot] = useState(inicial);
   const [errores, setErrores] = useState({});
+  const [agendaDia, setAgendaDia] = useState({ fecha: "", ocupadas: [], bloqueado: false });
   const idempotencyKey = useRef(createIdempotencyKey());
 
+  // Horas ya tomadas ese día: se deshabilitan en la lista (el servidor igual rechaza un horario ocupado).
+  useEffect(() => {
+    if (!isValidIsoDate(slot.fecha)) return undefined;
+    let activo = true;
+    adminApi(`/api/admin/agenda?desde=${slot.fecha}&hasta=${slot.fecha}`).then(({ ok, data }) => {
+      if (activo && ok) setAgendaDia({ fecha: slot.fecha, ocupadas: data.citas.map((c) => c.hora), bloqueado: data.bloqueados.includes(slot.fecha) });
+    });
+    return () => { activo = false; };
+  }, [slot.fecha]);
+
+  const delDia = agendaDia.fecha === slot.fecha ? agendaDia : { ocupadas: [], bloqueado: false };
+  const avisoFecha = errores.fecha || (delDia.bloqueado ? "Ese día está desactivado en la agenda." : "");
+  const avisoHora = errores.hora || (slot.hora && delDia.ocupadas.includes(slot.hora) ? "Ya hay una cita agendada para esa fecha y hora." : "");
+
   async function registrar(registration, project) {
-    if (!slot.fecha || !slot.hora) {
-      const errors = { fecha: slot.fecha ? "" : "Indica la fecha de la cita.", hora: slot.hora ? "" : "Selecciona la hora." };
+    if (!slot.fecha || !slot.hora || avisoFecha || avisoHora) {
+      const errors = { fecha: slot.fecha ? avisoFecha : "Indica la fecha de la cita.", hora: slot.hora ? avisoHora : "Selecciona la hora." };
       setErrores(errors);
+      // El horario está arriba del formulario: se lleva el foco (y la vista) al campo que falta.
+      document.getElementById(errors.fecha ? "manual-fecha" : "manual-hora")?.focus();
       return { status: "invalid", errors };
     }
     const result = await enviarSolicitud(registration, project, idempotencyKey.current, fetch, {
@@ -590,43 +652,45 @@ function CitaManual({ inicial, today, onClose, onCreada }) {
     <Modal labelledBy="manual-titulo" maxWidth={760} onClose={onClose}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
         <div style={{ flex: 1 }}>
-          <p className="eyebrow">Coordinación</p>
           <h3 id="manual-titulo" style={{ fontSize: 22 }}>Nueva cita manual</h3>
           <p className="muted" style={{ fontSize: 14 }}>Para estudiantes atendidos en persona o por teléfono. Queda Confirmada y no envía correo.</p>
         </div>
         <CloseButton onClick={onClose} />
       </div>
-      <RegistrationForm onSubmit={registrar} submitLabel="Registrar cita manual">
-        <div className="egreso-select-group full-width">
-          <div className="field">
-            <label htmlFor="manual-fecha">Fecha de la cita</label>
-            <input
-              id="manual-fecha"
-              type="date"
-              min={today}
-              value={slot.fecha}
-              onChange={(event) => { setSlot({ ...slot, fecha: event.target.value }); setErrores({ ...errores, fecha: "" }); }}
-              aria-invalid={Boolean(errores.fecha)}
-              className={errores.fecha ? "input-error" : undefined}
-            />
-            {errores.fecha && <p className="field-error" role="alert">{errores.fecha}</p>}
-          </div>
-          <div className="field">
-            <label htmlFor="manual-hora">Hora</label>
-            <select
-              id="manual-hora"
-              value={slot.hora}
-              onChange={(event) => { setSlot({ ...slot, hora: event.target.value }); setErrores({ ...errores, hora: "" }); }}
-              aria-invalid={Boolean(errores.hora)}
-              className={errores.hora ? "input-error" : undefined}
-            >
-              <option value="">Selecciona la hora</option>
-              {HORAS.map((h) => <option key={h} value={h}>{h}</option>)}
-            </select>
-            {errores.hora && <p className="field-error" role="alert">{errores.hora}</p>}
-          </div>
+      <fieldset className="horario-manual">
+        <legend className="sect">Horario de la cita</legend>
+        <div className="field">
+          <label htmlFor="manual-fecha">Fecha</label>
+          <input
+            id="manual-fecha"
+            type="date"
+            min={today}
+            value={slot.fecha}
+            onChange={(event) => { setSlot({ ...slot, fecha: event.target.value }); setErrores({ ...errores, fecha: "" }); }}
+            aria-invalid={Boolean(avisoFecha)}
+            className={avisoFecha ? "input-error" : undefined}
+          />
+          {avisoFecha && <p className="field-error" role="alert">{avisoFecha}</p>}
         </div>
-      </RegistrationForm>
+        <div className="field">
+          <label htmlFor="manual-hora">Hora</label>
+          <select
+            id="manual-hora"
+            value={slot.hora}
+            onChange={(event) => { setSlot({ ...slot, hora: event.target.value }); setErrores({ ...errores, hora: "" }); }}
+            aria-invalid={Boolean(avisoHora)}
+            className={avisoHora ? "input-error" : undefined}
+          >
+            <option value="">Selecciona la hora</option>
+            {HORAS.map((h) => {
+              const tomada = delDia.ocupadas.includes(h);
+              return <option key={h} value={h} disabled={tomada}>{tomada ? `${h} · ocupada` : h}</option>;
+            })}
+          </select>
+          {avisoHora && <p className="field-error" role="alert">{avisoHora}</p>}
+        </div>
+      </fieldset>
+      <RegistrationForm onSubmit={registrar} onCancel={onClose} submitLabel="Registrar cita manual" />
     </Modal>
   );
 }

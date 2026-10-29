@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { Source_Sans_3, Source_Serif_4 } from "next/font/google";
 import { getAdminSession } from "../../lib/server/admin-route.mjs";
 import AdminLogin from "./AdminLogin";
 import AdminNav from "./AdminNav";
@@ -8,17 +9,21 @@ import "./admin.css";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Coordinación | Servicio Social UCA", robots: { index: false } };
 
+// next/font las sirve desde el propio dominio: el CSP solo permite font-src 'self'.
+const sans = Source_Sans_3({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+const serif = Source_Serif_4({ subsets: ["latin"], variable: "--font-serif", display: "swap" });
+
 export default async function AdminLayout({ children }) {
   const session = await getAdminSession();
 
   return (
-    <div className="admin-app">
+    <div className={`admin-app ${sans.variable} ${serif.variable}`}>
       <header className="topbar no-print">
         <div className="topbar-inner">
           <div className="topbar-brand">
             <Image src="/Logo_UCA_2015.jpg" alt="Universidad Centroamericana José Simeón Cañas" width={30} height={41} />
             <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.25 }}>
-              <strong style={{ fontSize: 15 }}>Servicio Social · UCA</strong>
+              <strong className="brand-name">Servicio Social · UCA</strong>
               <span className="muted" style={{ fontSize: 12 }}>Sistema de citas</span>
             </div>
           </div>

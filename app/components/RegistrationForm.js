@@ -54,8 +54,9 @@ const projectOptions = (projects, query) => filterProjects(projects, query).map(
  * Formulario de datos del estudiante: lo usan el formulario público y la cita manual de coordinación.
  * `onSubmit(registration, project)` envía al servidor y devuelve el resultado de enviarSolicitud;
  * los errores de campos ajenos al formulario (p. ej. fecha/hora) los muestra el padre en `children`.
+ * Con `onCancel` los botones van en una fila, Cancelar junto a enviar (solo en la cita manual).
  */
-export default function RegistrationForm({ onSubmit, onEdit, submitLabel = "Registrar cita", children }) {
+export default function RegistrationForm({ onSubmit, onEdit, onCancel, submitLabel = "Registrar cita", children }) {
   const [registration, setRegistration] = useState(createEmptyRegistration);
   const [fieldErrors, setFieldErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -399,9 +400,18 @@ export default function RegistrationForm({ onSubmit, onEdit, submitLabel = "Regi
         <p className="submit-error" role="alert">{submitError}</p>
       )}
 
-      <button type="submit" disabled={isSubmitting} aria-busy={isSubmitting}>
-        {isSubmitting ? "Enviando..." : submitLabel}
-      </button>
+      {onCancel ? (
+        <div className="form-actions">
+          <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={isSubmitting}>Cancelar</button>
+          <button type="submit" className="btn btn-primary" disabled={isSubmitting} aria-busy={isSubmitting}>
+            {isSubmitting ? "Enviando..." : submitLabel}
+          </button>
+        </div>
+      ) : (
+        <button type="submit" disabled={isSubmitting} aria-busy={isSubmitting}>
+          {isSubmitting ? "Enviando..." : submitLabel}
+        </button>
+      )}
     </form>
   );
 }
