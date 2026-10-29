@@ -4,10 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const LINKS = [
-  { href: "/", label: "Formulario público" },
-  { href: "/admin", label: "Administración" },
+  { href: "/admin", label: "Agenda" },
   { href: "/admin/proyectos", label: "Proyectos" },
-  { href: "/admin/dashboard", label: "Dashboard BI" },
+  { href: "/admin/dashboard", label: "Informe" },
 ];
 
 export default function AdminNav() {
