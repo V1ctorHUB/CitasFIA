@@ -8,8 +8,9 @@ export const dynamic = "force-dynamic";
 // Si la base no responde, el cliente usa su catálogo local (inicializarProyectos).
 export async function GET() {
   try {
+    // Sin caché: si la coordinación oculta o vuelve a mostrar un proyecto, el formulario lo refleja al recargar.
     return NextResponse.json(await listActiveProjects(getPool()), {
-      headers: { "Cache-Control": "public, max-age=60" },
+      headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {
     console.error("[api/proyectos] error al leer catálogo:", error?.code ?? "", error?.message);
