@@ -2,6 +2,9 @@
 
 export const ORIGEN_LABEL = { FORMULARIO: "Formulario público", MANUAL: "Cita manual" };
 
+/** "1 cita" / "3 citas" */
+export const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+
 /**
  * Llamada a /api/admin. Si la sesión expiró recarga la página para mostrar el acceso.
  * @returns {Promise<{ ok: boolean, data: any }>}

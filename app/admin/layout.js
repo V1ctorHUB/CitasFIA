@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Source_Sans_3, Source_Serif_4 } from "next/font/google";
+import { Plus_Jakarta_Sans, Source_Sans_3, Source_Serif_4 } from "next/font/google";
 import { getAdminSession } from "../../lib/server/admin-route.mjs";
 import AdminLogin from "./AdminLogin";
 import AdminNav from "./AdminNav";
@@ -12,12 +12,14 @@ export const metadata = { title: "Coordinación | Servicio Social UCA", robots: 
 // next/font las sirve desde el propio dominio: el CSP solo permite font-src 'self'.
 const sans = Source_Sans_3({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
 const serif = Source_Serif_4({ subsets: ["latin"], variable: "--font-serif", display: "swap" });
+// Sans geométrica para números y etiquetas del Informe; los títulos siguen en serif.
+const bi = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-bi", display: "swap" });
 
 export default async function AdminLayout({ children }) {
   const session = await getAdminSession();
 
   return (
-    <div className={`admin-app ${sans.variable} ${serif.variable}`}>
+    <div className={`admin-app ${sans.variable} ${serif.variable} ${bi.variable}`}>
       <header className="topbar no-print">
         <div className="topbar-inner">
           <div className="topbar-brand">

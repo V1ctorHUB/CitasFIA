@@ -2,6 +2,7 @@
 /* Azul UCA = marca y acción; ocre = señal institucional escasa (sección activa, hoy). */
 .admin-app {
   --brand: #123c8c; --brand-hover: #0d3177; --brand-tint: #e6ecf8; --accent: #a8741a;
+  --texto: #192033; --texto-2: #5b667d; --linea: #dbe2ee; --linea-suave: #eef1f6; --peligro-fondo: #fdf2f2; --peligro-texto: #7f1d1d; --apagado: #8a93a5; --hoy: #8a5d10;
   min-height: 100vh; display: flex; flex-direction: column; font-size: 15px; line-height: 1.45;
   font-family: var(--font-sans), "Source Sans 3", "Segoe UI", system-ui, sans-serif;
 }
@@ -55,7 +56,7 @@
 /* La columna de horas queda fija al desplazar el calendario de lado (pantallas angostas). */
 .cal-hora { position: sticky; left: 0; z-index: 1; background: #fff; }
 /* Almuerzo y cierre: filas informativas, sin horarios para agendar. */
-.cal-pausa-hora { font-size: 12px; padding: 8px 8px 0 0; text-align: right; border-top: 1px solid #e3e8f1; }
+.cal-hora-fila { font-size: 12px; padding: 8px 8px 0 0; text-align: right; border-top: 1px solid #e3e8f1; }
 .cal-pausa, .cal-cierre { grid-column: 2 / -1; border-top: 1px solid #e3e8f1; border-left: 1px solid #e3e8f1; padding: 8px 12px; font-size: 12px; font-weight: 600; color: #5b667d; }
 .cal-pausa { min-height: 36px; background: repeating-linear-gradient(135deg, #f4f6fa 0 6px, #fff 6px 12px); }
 .cal-cierre { min-height: 32px; background: #fafbfd; font-weight: 400; }
@@ -70,7 +71,16 @@
 .slot-plus { opacity: 0; display: inline-flex; align-items: center; gap: 4px; }
 .slot-btn:hover .slot-plus, .slot-btn:focus-visible .slot-plus { opacity: 1; }
 .cita { flex: 1; min-width: 0; text-align: left; border: 0; border-radius: 6px; padding: 6px 8px; font: inherit; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
-.cita:hover { filter: brightness(.97); box-shadow: 0 2px 6px rgb(20 41 80 / 15%); }
+.cita:hover { filter: brightness(.97); box-shadow: inset 0 0 0 1px var(--e-borde), 0 2px 6px rgb(20 41 80 / 15%); }
+/* Estados de la cita: el JS solo elige la clase estado-*; los colores viven aquí. */
+.estado-PENDIENTE_CONFIRMACION { --e-fondo: #fff3d1; --e-texto: #4f3a00; --e-punto: #c98a00; --e-borde: #f0d68f; }
+/* Tinte del azul UCA: el relleno sólido queda reservado a la acción principal. */
+.estado-CONFIRMADA { --e-fondo: #e6ecf8; --e-texto: #0d2f6e; --e-punto: #123c8c; --e-borde: #9db2dc; }
+.estado-ASISTIO { --e-fondo: #e2f3e8; --e-texto: #14532d; --e-punto: #1f8a4c; --e-borde: #b9dcc6; }
+.estado-NO_ASISTIO { --e-fondo: #eceef2; --e-texto: #3f4757; --e-punto: #8a93a5; --e-borde: #d5d9e1; }
+.estado-tono { background: var(--e-fondo); color: var(--e-texto); box-shadow: inset 0 0 0 1px var(--e-borde); }
+.estado-punto { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--e-punto); }
+.estado-muestra { width: 12px; height: 12px; border-radius: 3px; background: var(--e-fondo); border: 1px solid var(--e-borde); }
 .dayhead { border-left: 1px solid #e3e8f1; padding: 10px 8px 8px; display: flex; flex-direction: column; gap: 2px; }
 .dayhead-hoy { background: #fbf6ea; }
 .linkbtn { border: 0; background: transparent; padding: 0; min-height: 28px; font: inherit; font-size: 12px; color: #123c8c; cursor: pointer; text-align: left; text-decoration: underline; text-underline-offset: 2px; }
@@ -83,10 +93,55 @@
 .horario-manual { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; margin: 0; padding: 14px 16px 16px; border: 0; border-radius: 10px; background: var(--brand-tint); }
 .horario-manual legend { float: left; width: 100%; padding: 0; margin-bottom: 2px; grid-column: 1 / -1; }
 .dialog .registration-form { margin-top: 6px; }
+.dialog-head { display: flex; align-items: flex-start; gap: 12px; }
 /* Grupos de un formulario en diálogo: dos columnas; el grupo principal va sobre el tinte de marca, como el horario de la cita manual. */
 .form-grupo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; margin: 0; padding: 0; border: 0; min-width: 0; }
 .form-grupo legend { float: left; width: 100%; padding: 0; margin-bottom: 2px; grid-column: 1 / -1; }
 .form-grupo.tinte { padding: 14px 16px 16px; border-radius: 10px; background: var(--brand-tint); }
+/* Campos en fila: etiqueta, control y aviso comparten filas; un aviso de error no desalinea a los vecinos. */
+.fila-campos { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) auto; grid-template-rows: auto auto auto; column-gap: 10px; }
+.fila-campos > .field { grid-row: span 3; grid-template-rows: subgrid; gap: 0; }
+.fila-campos > .field > label { margin-bottom: 8px; }
+.fila-campos > .field > .field-error { margin-top: 6px; }
+.fila-campos > .btn { grid-row: 2; grid-column: -2; align-self: end; }
+.fila-campos :is(select, .fecha-trigger) { height: 42px; min-height: 0; padding-block: 0; }
+.fila-campos > .btn { min-height: 42px; }
+
+/* Selector de fecha: semanas de lunes a viernes como la agenda; hoy en ocre, el día elegido en azul UCA. */
+.fecha { position: relative; min-width: 0; }
+.fecha-trigger { width: 100%; min-height: 46px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 12px; border: 1px solid #b7c2d4; border-radius: 8px; background: #fff; color: #192033; font: inherit; font-size: 15px; text-align: left; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease; }
+.fecha-trigger-sm { min-height: 40px; }
+.fecha-trigger:hover { border-color: #8d9cb8; }
+.fecha-trigger[aria-expanded="true"] { border-color: var(--brand); box-shadow: 0 0 0 3px rgb(18 60 140 / 14%); }
+.fecha-trigger svg { flex: none; color: #5b667d; }
+.fecha-trigger[aria-expanded="true"] svg { color: var(--brand); }
+.fecha-trigger.input-error { border-color: #ba2424; }
+.fecha-placeholder { color: #6b7488; }
+.fecha-panel { position: absolute; z-index: 30; top: calc(100% + 6px); left: 0; width: 300px; max-width: calc(100vw - 32px); padding: 12px; background: #fff; border: 1px solid #dbe2ee; border-radius: 12px; box-shadow: 0 18px 40px rgb(20 41 80 / 16%), 0 2px 6px rgb(20 41 80 / 6%); display: flex; flex-direction: column; gap: 8px; transform-origin: top left; animation: fecha-entra .18s cubic-bezier(.16, 1, .3, 1); }
+.fecha-panel-arriba { top: auto; bottom: calc(100% + 6px); transform-origin: bottom left; }
+.fecha-panel-derecha { left: auto; right: 0; transform-origin: top right; }
+.fecha-panel-arriba.fecha-panel-derecha { transform-origin: bottom right; }
+@keyframes fecha-entra { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
+@media (prefers-reduced-motion: reduce) { .fecha-panel { animation: none; } }
+.fecha-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-bottom: 2px; }
+.admin-app .fecha-mes { font-size: 16px; }
+.admin-app .fecha-mes::first-letter { text-transform: uppercase; }
+.fecha-grid { display: flex; flex-direction: column; gap: 4px; }
+.fecha-fila { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+.fecha-fila > span { display: grid; }
+.fecha-dow { font-size: 12px; font-weight: 600; color: #5b667d; text-align: center; padding: 2px 0 4px; }
+.fecha-dia { position: relative; height: 38px; border: 0; border-radius: 8px; background: transparent; color: #192033; font: inherit; font-size: 14px; font-variant-numeric: tabular-nums; cursor: pointer; transition: background-color .12s ease; }
+.fecha-dia:hover { background: #eef2f9; }
+.fecha-fuera { color: #6b7488; }
+.fecha-hoy { color: #8a5d10; font-weight: 700; }
+.fecha-hoy::after { content: ""; position: absolute; left: 50%; bottom: 5px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--accent); }
+.fecha-sel, .fecha-sel:hover { background: var(--brand); color: #fff; font-weight: 700; }
+.fecha-sel.fecha-hoy::after { background: #fff; }
+.fecha-dia[aria-disabled="true"], .fecha-dia[aria-disabled="true"]:hover { color: #aab3c3; background: transparent; cursor: not-allowed; font-weight: 400; }
+.fecha-dia.fecha-bloq[aria-disabled="true"] { background: repeating-linear-gradient(135deg, #edf0f5 0 5px, #fff 5px 10px); color: #6b7488; text-decoration: line-through; }
+.fecha-dia.fecha-hoy[aria-disabled="true"]::after { background: #c9b48a; }
+.fecha-pie { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 2px; padding-top: 8px; border-top: 1px solid #eef1f6; font-size: 12px; color: #5b667d; }
+.fecha-pie .btn-sm { min-height: 28px; color: var(--brand); }
 .field-hint { margin: -4px 0 0; font-size: 13px; line-height: 1.35; color: #5b667d; }
 .admin-app select:disabled { background: #f3f5f9; color: #5b667d; cursor: not-allowed; }
 .admin-app ::placeholder { color: #6b7488; opacity: 1; }
@@ -104,6 +159,9 @@
 .tbl th { position: sticky; top: 0; background: #f6f8fb; text-align: left; font-weight: 600; color: #3b4560; padding: 9px 10px; border-bottom: 1px solid #dbe2ee; white-space: nowrap; }
 .tbl td { padding: 8px 10px; border-bottom: 1px solid #eef1f6; white-space: nowrap; }
 /* Proyectos: la tabla muestra lo esencial; el nombre abre el detalle completo. */
+.tbl-wrap { overflow: auto; border: 1px solid var(--linea-suave); border-radius: 8px; }
+.bi .tbl-wrap { border-color: var(--bi-linea); }
+.pagina { flex: 1; width: 100%; max-width: 1440px; margin: 0 auto; padding: 24px 24px 56px; display: flex; flex-direction: column; gap: 16px; }
 .tbl-proyectos td { white-space: normal; vertical-align: top; }
 .tbl-proyectos .col-proyecto { min-width: 240px; }
 .clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -133,8 +191,9 @@
 /* Proyectos incompletos: señal en ocre (acento institucional), distinta del rojo de error. */
 .aviso-incompletos { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0; padding: 10px 14px; border: 1px solid #ecd9b0; border-radius: 10px; background: #fdf7ea; color: #5c3d0a; font-size: 14px; line-height: 1.45; }
 .badge-off { background: #edf0f5; color: #5b667d; }
-.kpi { padding: 16px; display: flex; flex-direction: column; gap: 4px; }
-.kpi-n { font-size: 30px; font-weight: 600; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.kpi { padding: 20px 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; }
+.kpi-n { font-size: clamp(30px, 3vw, 40px); font-weight: 600; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .bar-track { height: 10px; border-radius: 5px; background: #edf0f5; overflow: hidden; }
 .bar-fill { height: 100%; border-radius: 5px; background: #123c8c; transition: width .2s ease; }
 
@@ -147,6 +206,7 @@
   .agenda-aside { position: static; max-height: 60vh; }
   .agenda-calendar { position: static; }
   .horario-manual, .form-grupo { grid-template-columns: 1fr; }
+  .fila-campos { display: flex; flex-direction: column; gap: 12px; }
   .tbl-proyectos .col-opcional { display: none; }
   .tbl-proyectos .col-proyecto { min-width: 120px; }
   .estado-celda { flex-direction: column; align-items: flex-start; }
@@ -161,6 +221,70 @@
 }
 
 /* Dashboard estilo Power BI: cada gráfico es también un filtro. */
+/* Paleta del Informe: para probar otra, se cambian solo estos valores (los gráficos los leen como var(--bi-*)). */
+.admin-app:has(.bi) {
+  --bi-fondo: #f1f5f9; --bi-tarjeta: #ffffff; --bi-linea: #e2e8f0; --bi-texto: #0f172a; --bi-texto-2: #475569;
+  --bi-acento: #2563eb; --bi-acento-hover: #1d4ed8; --bi-exito: #059669; --bi-alerta: #e11d48; --bi-pendiente: #0891b2;
+  /* Tonos oscuros de cada estado para texto sobre su fondo suave (contraste ≥ 4.5:1). */
+  --bi-exito-texto: #047857; --bi-exito-fondo: #ecfdf5;
+  --bi-alerta-texto: #be123c; --bi-alerta-fondo: #fff1f2;
+  --bi-pendiente-texto: #0e7490; --bi-pendiente-fondo: #ecfeff;
+  --bi-info-texto: #1e40af; --bi-info-fondo: #eff6ff; --bi-info-borde: #3b82f6;
+  --bi-genero-m: #0f2c59; --bi-genero-f: #e879a0; --bi-genero-o: #6e9a85; --bi-genero-n: #648299;
+  --bi-genero-m-riel: #e8edf5; --bi-genero-f-riel: #fdf2f8; --bi-genero-o-riel: #edf4f0; --bi-genero-n-riel: #edf1f5;
+  /* Mapa de calor de días y horas. */
+  --bi-calor-pico: #4f46e5; --bi-calor-medio: #818cf8; --bi-calor-bajo: #c7d2fe; --bi-calor-vacio: #f1f5f9; --bi-calor-texto: #94a3b8;
+  --bi-facultad: #334155; --bi-facultad-texto: #1e293b; --bi-ranking: #059669;
+  --bi-neutro: #94a3b8; --bi-atenuado: #e2e8f0; --bi-pista: #e2e8f0; --bi-tinte: #eff6ff;
+  background: var(--bi-fondo);
+}
+.bi { --brand: var(--bi-acento); color: var(--bi-texto); font-family: var(--font-bi), var(--font-sans), system-ui, sans-serif; }
+.bi :is(h1, h2, h3) { color: var(--bi-texto); }
+.bi .muted { color: var(--bi-texto-2); }
+.bi .panel { background: var(--bi-tarjeta); border-color: transparent; box-shadow: 0 1px 3px rgb(0 0 0 / 6%), 0 1px 2px rgb(0 0 0 / 4%); }
+.bi .chart-activo { box-shadow: inset 0 0 0 2px var(--bi-acento), 0 1px 3px rgb(0 0 0 / 6%); }
+.bi .btn-primary { background: var(--bi-acento); } .bi .btn-primary:hover { background: var(--bi-acento-hover); }
+/* KPI: la etiqueta es una píldora suave del color del estado; el número va en su tono oscuro. */
+/* El pie reserva su línea aunque esté vacío: los números quedan alineados entre tarjetas. */
+.kpi-pie { min-height: 1.45em; font-size: 12px; }
+.kpi-pill { padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--bi-tinte); color: var(--bi-info-texto); }
+.kpi-exito { --kpi-fondo: var(--bi-exito-fondo); --kpi-texto: var(--bi-exito-texto); }
+.kpi-alerta { --kpi-fondo: var(--bi-alerta-fondo); --kpi-texto: var(--bi-alerta-texto); }
+.kpi-pendiente { --kpi-fondo: var(--bi-pendiente-fondo); --kpi-texto: var(--bi-pendiente-texto); }
+:is(.kpi-exito, .kpi-alerta, .kpi-pendiente) .kpi-pill { background: var(--kpi-fondo); color: var(--kpi-texto); }
+:is(.kpi-exito, .kpi-alerta, .kpi-pendiente) .kpi-n { color: var(--kpi-texto); }
+/* Hallazgo destacado del bloque de días y horas. */
+.insight { margin: 0; padding: 10px 14px; border: 1px solid var(--bi-calor-bajo); border-radius: 10px; background: #eef2ff; color: #3730a3; font-size: 13px; }
+.bar-row-vacia .bar-track { background: var(--bi-calor-vacio); }
+.bar-row-vacia > :is(.ellipsis, .muted) { color: var(--bi-calor-texto); }
+/* Facultad (padre) con barra pizarra; sus carreras llevan solo un recuento. */
+.fila-facultad > .ellipsis { color: var(--bi-facultad-texto); font-weight: 600; }
+.cuenta-chip { padding: 2px 9px; border-radius: 999px; background: #f1f5f9; color: var(--bi-texto); font-size: 12px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* Ranking de proyectos: puesto en círculo; el primero con barra más gruesa y plena. */
+.puesto { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: #f1f5f9; color: var(--bi-texto-2); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
+/* Esmeralda oscuro en el círculo: el número blanco necesita ≥ 4.5:1. */
+.puesto-1 { background: var(--bi-exito-texto); color: #fff; }
+.puesto-otros { background: transparent; }
+.fila-ranking .bar-fill { opacity: .72; }
+.fila-lider .bar-track { height: 14px; border-radius: 7px; }
+.fila-lider > .ellipsis { font-weight: 600; }
+/* Leyenda de género: viñeta redonda, cifra a la derecha y barra con riel tintado del mismo color. */
+.legend-row.genero-fila { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; column-gap: 10px; row-gap: 6px; }
+.genero-punto { width: 12px; height: 12px; border-radius: 50%; }
+.genero-riel { grid-column: 2 / -1; height: 8px; border-radius: 4px; overflow: hidden; display: block; }
+.genero-riel > span { display: block; height: 100%; border-radius: 4px; transition: width .2s ease, background .15s ease; }
+.bi .kpi-n { letter-spacing: -.03em; }
+.bi :is(.bar-track, .seg-bar) { background: var(--bi-pista); }
+.bi .cols { border-bottom-color: #cbd5e1; }
+.bi :is(.cols-x, .col-n) { color: var(--bi-texto-2); }
+.bi :is(.bar-row:hover, .legend-row:hover, .col:hover, .col:focus-visible, .toggle:hover, .legend-btn:hover) { background: #f3f4f6; }
+.bi :is(.bar-row-on, .bar-row-on:hover, .col-on) { background: var(--bi-tinte); }
+.bi .chip { border-color: #bfdbfe; background: var(--bi-tinte); color: var(--bi-acento); }
+.bi .chip:hover { background: #dbeafe; }
+.bi :is(.legend-btn-on, .legend-btn-on:hover) { background: var(--bi-tinte); border-color: #bfdbfe; color: var(--bi-acento-hover); }
+.bi .tbl th { background: #f8fafc; color: #334155; border-bottom-color: var(--bi-linea); }
+.bi .tbl td { border-bottom-color: #f1f5f9; }
+
 .filter-bar { position: sticky; top: 8px; z-index: 5; padding: 10px 14px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-height: 48px; box-shadow: 0 4px 14px rgb(20 41 80 / 6%); }
 .chip { min-height: 30px; padding: 0 10px; border: 1px solid #b3c3e4; border-radius: 999px; background: #edf3ff; color: #123c8c; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; }
 .chip:hover { background: #dfe9fb; }
@@ -176,8 +300,10 @@
 .donut-slice:focus-visible { outline: none; stroke: #192033; stroke-width: 3; }
 .dash-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; }
 .dash-grid > * { grid-column: span 12; min-width: 0; }
-@media (min-width: 760px) { .dash-grid > * { grid-column: span var(--md, 6); } }
-@media (min-width: 1180px) { .dash-grid > * { grid-column: span var(--lg, 4); } }
+/* Columnas según el ancho del propio tablero, no de la ventana: la captura del PDF queda con el mismo acomodo que la pantalla. */
+.tablero { container-type: inline-size; }
+@container (min-width: 712px) { .dash-grid > * { grid-column: span var(--md, 6); } }
+@container (min-width: 1132px) { .dash-grid > * { grid-column: span var(--lg, 4); } }
 .chart-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 10px; }
 .chart-head h3 { margin: 0; font-size: 16px; font-weight: 600; }
 .chart-scroll { display: flex; flex-direction: column; gap: 2px; max-height: 300px; overflow-y: auto; }
@@ -188,7 +314,9 @@
 .seg-bar > * { min-width: 3px; border: 0; padding: 0; cursor: inherit; transition: background .15s ease; }
 .seg-bar > button { cursor: pointer; }
 .cols { display: flex; align-items: stretch; height: 170px; border-bottom: 1px solid #c3c9d6; }
-.cols > * { flex: 1 1 0; min-width: 0; }
+/* Columnas con ancho tope y centradas: con pocos valores (p. ej. un solo ciclo) no se estiran por toda la tarjeta. */
+.cols { justify-content: center; }
+.cols > * { flex: 1 1 0; min-width: 0; max-width: 72px; }
 .cols-x { height: auto; border: 0; font-size: 11px; color: #5b667d; text-align: center; white-space: nowrap; }
 .cols-x > span { overflow: visible; }
 .col { display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch; padding: 0; border: 0; border-radius: 4px 4px 0 0; background: transparent; cursor: pointer; font: inherit; }

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { readSheet } from "read-excel-file/browser";
 import { CONFIRMAR_ELIMINAR, MODALIDADES, ORIGENES, PROJECT_COLUMNS, rowsToProjects, validateProject } from "../../../lib/projects.mjs";
 import { normalizeSearchText } from "../../../lib/registration-form.mjs";
-import { adminApi, errorMessage } from "../api";
+import { adminApi, errorMessage, plural } from "../api";
 import { CloseButton, Modal } from "../Modal";
 import { IconoDescargar, IconoMas } from "../icons";
 
@@ -15,11 +15,9 @@ const esPorDefecto = (p) => p.id === 0;
 // Le falta alguno de los datos de la hoja (proyectos creados antes del formato actual).
 const estaIncompleto = (p) => !esPorDefecto(p) && PROJECT_COLUMNS.some(({ campo }) => !p[campo]);
 
-const contar = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
-
 function resultadoTexto({ creados, existentes }) {
-  const partes = [contar(creados, "proyecto agregado", "proyectos agregados")];
-  if (existentes.length) partes.push(`${contar(existentes.length, "ya existía", "ya existían")}: ${existentes.join(", ")}`);
+  const partes = [plural(creados, "proyecto agregado", "proyectos agregados")];
+  if (existentes.length) partes.push(`${plural(existentes.length, "ya existía", "ya existían")}: ${existentes.join(", ")}`);
   const aviso = creados ? ` ${creados === 1 ? "Ya aparece" : "Ya aparecen"} en el formulario.` : "";
   return `${partes.join(" · ")}.${aviso}`;
 }
@@ -97,7 +95,7 @@ export default function ProyectosView() {
   async function eliminar(proyecto) {
     const { ok, data } = await adminApi(`/api/admin/proyectos/${proyecto.id}`, { method: "DELETE", body: { confirmar: CONFIRMAR_ELIMINAR } });
     if (!ok) return { ok, error: errorMessage(data) };
-    const partes = [contar(data.citas, "cita", "citas"), contar(data.estudiantes, "estudiante", "estudiantes")];
+    const partes = [plural(data.citas, "cita", "citas"), plural(data.estudiantes, "estudiante", "estudiantes")];
     setMensaje(`Se eliminó «${proyecto.nombre}» junto con ${partes.join(" y ")}.`);
     setDetalle(null);
     await cargar();
@@ -131,7 +129,7 @@ export default function ProyectosView() {
   const incompletos = (proyectos ?? []).filter(estaIncompleto).length;
 
   return (
-    <main style={{ flex: 1, width: "100%", maxWidth: 1440, margin: "0 auto", padding: "24px 24px 56px", display: "flex", flexDirection: "column", gap: 18 }}>
+    <main className="pagina">
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 12 }}>
         <div style={{ marginRight: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
           <h1 style={{ fontSize: 30 }}>Proyectos de horas sociales</h1>
@@ -172,7 +170,7 @@ export default function ProyectosView() {
         {incompletos > 0 && estado !== "incompletos" && (
           <div className="aviso-incompletos" role="status">
             <p style={{ marginRight: "auto" }}>
-              <strong>{contar(incompletos, "proyecto con datos incompletos", "proyectos con datos incompletos")}.</strong>
+              <strong>{plural(incompletos, "proyecto con datos incompletos", "proyectos con datos incompletos")}.</strong>
               {" "}Se crearon antes del formato actual: falta parte de su ficha (perfil, horario, responsable…).
             </p>
             <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEstado("incompletos")}>Ver incompletos</button>
@@ -184,7 +182,7 @@ export default function ProyectosView() {
             <button type="button" className="linkbtn" style={{ fontSize: 13 }} onClick={cargar}>Reintentar</button>
           </p>
         )}
-        <div style={{ overflow: "auto", maxHeight: "min(70vh, 760px)", border: "1px solid #eef1f6", borderRadius: 8 }}>
+        <div className="tbl-wrap" style={{ maxHeight: "min(70vh, 760px)" }}>
           <table className="tbl tbl-proyectos">
             <caption className="sr-only">Proyectos de horas sociales. Activa el nombre de un proyecto para ver todos sus datos.</caption>
             <thead>
@@ -269,7 +267,7 @@ function DetalleProyecto({ proyecto: p, onClose, onEditar, onEliminar, onCambiar
     <Modal labelledBy={eliminando ? "eliminar-titulo" : "detalle-titulo"} maxWidth={eliminando ? 560 : 640} onClose={onClose}>
       {eliminando ? <EliminarProyecto proyecto={p} onVolver={() => setEliminando(false)} onClose={onClose} onEliminar={onEliminar} /> : (
       <>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+      <div className="dialog-head">
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 4 }}>
           <h3 id="detalle-titulo" style={{ fontSize: 22, overflowWrap: "anywhere" }}>{p.nombre}</h3>
           <p className="muted" style={{ fontSize: 14 }}>
@@ -349,7 +347,7 @@ function EliminarProyecto({ proyecto: p, onVolver, onClose, onEliminar }) {
 
   return (
     <>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+      <div className="dialog-head">
         <h3 id="eliminar-titulo" style={{ flex: 1, fontSize: 22, overflowWrap: "anywhere" }}>¿Eliminar «{p.nombre}»?</h3>
         <CloseButton onClick={onClose} />
       </div>
@@ -358,13 +356,13 @@ function EliminarProyecto({ proyecto: p, onVolver, onClose, onEliminar }) {
           <p><strong>Se borra para siempre de la base de datos, junto con todo lo relacionado:</strong></p>
           <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 2 }}>
             <li>El proyecto y todos sus datos.</li>
-            <li>{contar(p.citas, "cita registrada", "citas registradas")}, con su historial y sus correos.</li>
+            <li>{plural(p.citas, "cita registrada", "citas registradas")}, con su historial y sus correos.</li>
             <li>Los estudiantes que solo tenían citas en este proyecto.</li>
             <li>La contraparte «{p.institucion}», si no le quedan otros proyectos.</li>
           </ul>
           <p>No se puede deshacer. Solo queda un registro de quién lo eliminó y cuándo.</p>
         </div>
-        <p className="muted" style={{ fontSize: 14 }}>Si solo quieres que deje de aparecer en el formulario, desactívalo desde «Editar proyecto».</p>
+        <p className="muted" style={{ fontSize: 14 }}>Si solo quieres que deje de aparecer en el formulario, usa «Ocultar del formulario».</p>
         <div className="field">
           <label htmlFor="eliminar-confirmar">Escribe {CONFIRMAR_ELIMINAR} para confirmar</label>
           <input id="eliminar-confirmar" autoFocus value={texto} onChange={(e) => { setTexto(e.target.value); setError(""); }} autoComplete="off" autoCapitalize="characters" spellCheck={false} />
@@ -547,7 +545,7 @@ function ProyectoManual({ inicial, sugerencias, correos, onGuardar, onCancelar }
 
   return (
     <Modal labelledBy="proyecto-titulo" maxWidth={760} onClose={intentarCerrar}>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+      <div className="dialog-head">
         <div style={{ flex: 1 }}>
           <h3 id="proyecto-titulo" style={{ fontSize: 22 }}>{editando ? "Editar proyecto" : "Nuevo proyecto"}</h3>
           <p className="muted" style={{ fontSize: 14 }}>
@@ -715,7 +713,7 @@ function ImportarExcel({ onGuardar, onCancelar }) {
                 <p style={{ fontSize: 14 }} role="status">
                   {lectura.proyectos.length + lectura.errores.length === 0
                     ? "El archivo no tiene proyectos en la primera hoja."
-                    : <>{contar(lectura.proyectos.length, "proyecto listo", "proyectos listos")}{lectura.errores.length > 0 && <>, <span className="err">{contar(lectura.errores.length, "fila con error", "filas con error")}</span></>}.</>}
+                    : <>{plural(lectura.proyectos.length, "proyecto listo", "proyectos listos")}{lectura.errores.length > 0 && <>, <span className="err">{plural(lectura.errores.length, "fila con error", "filas con error")}</span></>}.</>}
                 </p>
                 {lectura.errores.length > 0 && (
                   <ul className="err" role="alert" style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 4 }}>
@@ -724,7 +722,7 @@ function ImportarExcel({ onGuardar, onCancelar }) {
                   </ul>
                 )}
                 {lectura.proyectos.length > 0 && (
-                  <div style={{ overflow: "auto", maxHeight: 280, border: "1px solid #eef1f6", borderRadius: 8 }}>
+                  <div className="tbl-wrap" style={{ maxHeight: 280 }}>
                     <table className="tbl">
                       <thead><tr><th>Fila</th>{PROJECT_COLUMNS.map(({ campo, titulo }) => <th key={campo}>{titulo}</th>)}</tr></thead>
                       <tbody>
@@ -754,7 +752,7 @@ function ImportarExcel({ onGuardar, onCancelar }) {
         <button type="button" className="btn btn-primary" disabled={!listo || enviando} onClick={importar}>
           {!lectura ? "Elige un archivo"
             : lectura.errores.length ? "Corrige las filas con error"
-              : enviando ? "Importando…" : `Importar ${contar(lectura.proyectos.length, "proyecto", "proyectos")}`}
+              : enviando ? "Importando…" : `Importar ${plural(lectura.proyectos.length, "proyecto", "proyectos")}`}
         </button>
       </div>
     </section>

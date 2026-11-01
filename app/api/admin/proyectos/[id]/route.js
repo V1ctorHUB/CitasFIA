@@ -1,7 +1,7 @@
 import { deleteProject, setProjectActive, updateProject } from "../../../../../lib/db/projects-repository.mjs";
 import { cleanProject, CONFIRMAR_ELIMINAR, validateProject } from "../../../../../lib/projects.mjs";
 import { getPool } from "../../../../../lib/db/pool.mjs";
-import { adminRoute, readBody } from "../../../../../lib/server/admin-route.mjs";
+import { adminRoute, idDeRuta, readBody } from "../../../../../lib/server/admin-route.mjs";
 import { json } from "../../../../../lib/server/http.mjs";
 
 export const dynamic = "force-dynamic";
@@ -9,10 +9,8 @@ export const dynamic = "force-dynamic";
 const PG_UNIQUE_VIOLATION = "23505";
 const PG_CHECK_VIOLATION = "23514";
 
-async function proyectoId(params) {
-  const { id } = await params;
-  return /^\d{1,9}$/.test(id) ? id : null;
-}
+// Hasta 9 cifras: cabe en el integer de Postgres.
+const proyectoId = (params) => idDeRuta(params, 9);
 
 // POST /api/admin/proyectos/:id { institucion, nombre, perfil, horario, responsable, responsable_correo, tipo_servicio, ubicacion, activo }
 export const POST = adminRoute(async (request, { params, session }) => {
