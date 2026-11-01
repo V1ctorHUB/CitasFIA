@@ -19,11 +19,10 @@ import {
   todayInElSalvador,
 } from "../../lib/agenda.mjs";
 import { createIdempotencyKey, enviarSolicitud, GENDER_LABELS } from "../../lib/registration-form.mjs";
-import { adminApi, errorMessage, ORIGEN_LABEL } from "./api";
+import { adminApi, errorMessage, ORIGEN_LABEL, plural } from "./api";
+import DatePicker from "./DatePicker";
 import { CloseButton, Modal } from "./Modal";
-import { IconoCheck, IconoMas } from "./icons";
-
-const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+import { IconoCheck, IconoChevron, IconoMas } from "./icons";
 
 function weekLabel(lunes) {
   const viernes = addDays(lunes, 4);
@@ -138,13 +137,13 @@ export default function AgendaView() {
   return (
     <main style={{ flex: 1, width: "100%", maxWidth: 1440, margin: "0 auto", padding: "20px 24px 48px", display: "flex", flexWrap: "wrap", gap: 20, alignItems: "flex-start" }}>
       <aside className="panel agenda-aside" aria-label="Solicitudes">
-        <div style={{ padding: "14px 16px 10px", display: "flex", flexDirection: "column", gap: 10, borderBottom: "1px solid #eef1f6" }}>
+        <div style={{ padding: "14px 16px 10px", display: "flex", flexDirection: "column", gap: 10, borderBottom: "1px solid var(--linea-suave)" }}>
           <h2 style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 17 }}>
             Solicitudes <span className="badge">{agenda.solicitudes.length}</span>
           </h2>
           <div style={{ position: "relative" }}>
             <label htmlFor="buscar" className="sr-only">Buscar caso</label>
-            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5b667d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", left: 12, top: 14 }}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--texto-2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", left: 12, top: 14 }}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
             <input
               id="buscar"
               type="search"
@@ -167,7 +166,7 @@ export default function AgendaView() {
 
         <div className="agenda-aside-list" role="list">
           {!resultados && !cargando && agenda.solicitudes.length === 0 && (
-            <p className="muted" style={{ fontSize: 14, padding: "24px 8px", textAlign: "center", border: "1px dashed #d3dae6", borderRadius: 10 }}>
+            <p className="muted" style={{ fontSize: 14, padding: "24px 8px", textAlign: "center", border: "1px dashed var(--linea)", borderRadius: 10 }}>
               Bandeja al día: ninguna solicitud espera horario.
             </p>
           )}
@@ -207,8 +206,8 @@ export default function AgendaView() {
               <span style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12 }}>
                 <span className="mono muted">{s.caso}</span>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                  <i aria-hidden="true" style={{ width: 8, height: 8, borderRadius: "50%", background: ESTADOS[s.estado].dot }} />
-                  {ESTADOS[s.estado].label}
+                  <i aria-hidden="true" className={`estado-${s.estado} estado-punto`} />
+                  {ESTADOS[s.estado]}
                 </span>
               </span>
               <span style={{ fontWeight: 600, fontSize: 15 }}>{s.nombreCompleto}</span>
@@ -223,11 +222,11 @@ export default function AgendaView() {
         <div className="panel" style={{ padding: "14px 16px", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px 12px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <button type="button" className="btn btn-ghost btn-icon" onClick={() => setSemana((s) => s - 1)} aria-label="Semana anterior">
-              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+              <IconoChevron direccion="izquierda" />
             </button>
             <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSemana(0)} disabled={semana === 0}>Semana actual</button>
             <button type="button" className="btn btn-ghost btn-icon" onClick={() => setSemana((s) => s + 1)} aria-label="Semana siguiente">
-              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+              <IconoChevron />
             </button>
           </div>
           <h2 style={{ fontSize: 20, marginRight: "auto" }}>{weekLabel(lunes)}</h2>
@@ -241,10 +240,10 @@ export default function AgendaView() {
         </div>
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 16px", fontSize: 13 }}>
-          {Object.entries(ESTADOS).map(([key, estado]) => (
+          {Object.entries(ESTADOS).map(([key, label]) => (
             <span key={key} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <i aria-hidden="true" style={{ width: 12, height: 12, borderRadius: 3, background: estado.bg, border: `1px solid ${estado.border}` }} />
-              {estado.label}
+              <i aria-hidden="true" className={`estado-${key} estado-muestra`} />
+              {label}
             </span>
           ))}
           <span className="muted" style={{ marginLeft: "auto" }}>
@@ -253,7 +252,7 @@ export default function AgendaView() {
         </div>
 
         {!cargando && agenda.citas.length === 0 && (
-          <p role="status" style={{ padding: "12px 16px", border: "1px solid #dbe2ee", background: "#fff", borderRadius: 10, fontWeight: 600, color: "#123c8c" }}>
+          <p role="status" style={{ padding: "12px 16px", border: "1px solid var(--linea)", background: "#fff", borderRadius: 10, fontWeight: 600, color: "var(--brand)" }}>
             Agenda libre en esta semana
           </p>
         )}
@@ -263,7 +262,7 @@ export default function AgendaView() {
             <div className="cal-hora" />
             {diasIso.map((iso, i) => {
               const bq = bloqueado(iso);
-              const color = bq ? "#8a93a5" : iso === today ? "#8a5d10" : "#192033";
+              const color = bq ? "var(--apagado)" : iso === today ? "var(--hoy)" : "var(--texto)";
               return (
                 <div key={iso} className={iso === today ? "dayhead dayhead-hoy" : "dayhead"}>
                   <span style={{ fontSize: 12, color, fontWeight: 600 }}>{DIAS[i]}{iso === today && " · hoy"}</span>
@@ -280,7 +279,7 @@ export default function AgendaView() {
               <Fragment key={hora}>
                 {hora === ALMUERZO.hasta && (
                   <>
-                    <div className="muted cal-hora cal-pausa-hora">{ALMUERZO.desde}</div>
+                    <div className="muted cal-hora cal-hora-fila">{ALMUERZO.desde}</div>
                     <div className="cal-pausa">Almuerzo · {ALMUERZO.desde} – {ALMUERZO.hasta}</div>
                   </>
                 )}
@@ -304,7 +303,7 @@ export default function AgendaView() {
                 />
               </Fragment>
             ))}
-            <div className="muted cal-hora cal-pausa-hora">{CIERRE}</div>
+            <div className="muted cal-hora cal-hora-fila">{CIERRE}</div>
             <div className="cal-cierre">Fin de la jornada</div>
           </div>
         </div>
@@ -374,10 +373,9 @@ export default function AgendaView() {
 function Fila({ hora, diasIso, citas, today, bloqueado, enMano, drag, onAbrir, onClickLibre, onDrop, onDragStart, onDragEnd }) {
   return (
     <>
-      <div className="muted cal-hora" style={{ fontSize: 12, padding: "8px 8px 0 0", textAlign: "right", borderTop: "1px solid #e3e8f1" }}>{hora}</div>
+      <div className="muted cal-hora cal-hora-fila">{hora}</div>
       {diasIso.map((fecha, i) => {
         const cita = citas.find((c) => c.fecha === fecha && c.hora === hora) ?? null;
-        const estado = cita ? ESTADOS[cita.estado] : null;
         const bq = bloqueado(fecha);
         const pasado = fecha < today;
         const objetivo = !cita && !bq && !pasado && (Boolean(enMano) || Boolean(drag));
@@ -394,7 +392,7 @@ function Fila({ hora, diasIso, citas, today, bloqueado, enMano, drag, onAbrir, o
             {cita && (
               <button
                 type="button"
-                className="cita"
+                className={`cita estado-${cita.estado} estado-tono`}
                 draggable={isMovable(cita.estado)}
                 onDragStart={(event) => {
                   if (!isMovable(cita.estado)) { event.preventDefault(); return; }
@@ -404,15 +402,14 @@ function Fila({ hora, diasIso, citas, today, bloqueado, enMano, drag, onAbrir, o
                 }}
                 onDragEnd={onDragEnd}
                 onClick={() => onAbrir(cita)}
-                style={{ background: estado.bg, color: estado.ink, boxShadow: `inset 0 0 0 1px ${estado.border}` }}
-                aria-label={`${cita.nombreCompleto}, ${dia}, ${estado.label}`}
+                aria-label={`${cita.nombreCompleto}, ${dia}, ${ESTADOS[cita.estado]}`}
               >
                 <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                  <i aria-hidden="true" style={{ flex: "none", width: 7, height: 7, borderRadius: "50%", background: estado.dot }} />
+                  <i aria-hidden="true" className="estado-punto" />
                   <span title={cita.nombreCompleto} style={{ fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{cita.nombreCompleto}</span>
                 </span>
                 <span className="mono" style={{ fontSize: 12, opacity: 0.85, whiteSpace: "nowrap" }}>{cita.caso}</span>
-                <span style={{ fontSize: 12 }}>{estado.label}</span>
+                <span style={{ fontSize: 12 }}>{ESTADOS[cita.estado]}</span>
               </button>
             )}
             {!cita && !bq && (
@@ -434,13 +431,44 @@ function Fila({ hora, diasIso, citas, today, bloqueado, enMano, drag, onAbrir, o
   );
 }
 
+const DIA_LIBRE = { ocupadas: [], bloqueado: false };
+
+/** Horas ya tomadas de un día y si está desactivado (el servidor igual rechaza un horario ocupado). */
+function useAgendaDia(fecha) {
+  const [dia, setDia] = useState({ fecha: "", ...DIA_LIBRE });
+  useEffect(() => {
+    if (!isValidIsoDate(fecha)) return undefined;
+    let activo = true;
+    adminApi(`/api/admin/agenda?desde=${fecha}&hasta=${fecha}`).then(({ ok, data }) => {
+      if (activo && ok) setDia({ fecha, ocupadas: data.citas.map((c) => c.hora), bloqueado: data.bloqueados.includes(fecha) });
+    });
+    return () => { activo = false; };
+  }, [fecha]);
+  return dia.fecha === fecha ? dia : DIA_LIBRE;
+}
+
+/** Opciones de hora de la jornada; las ocupadas se ven pero no se pueden elegir. */
+function OpcionesHora({ ocupadas, vacio }) {
+  return (
+    <>
+      <option value="">{vacio}</option>
+      {HORAS.map((h) => {
+        const tomada = ocupadas.includes(h);
+        return <option key={h} value={h} disabled={tomada}>{tomada ? `${h} · ocupada` : h}</option>;
+      })}
+    </>
+  );
+}
+
 function Detalle({ cita, hoy, onClose, onAccion, onMover }) {
   const [historial, setHistorial] = useState([]);
   const [rep, setRep] = useState({ fecha: "", hora: "" });
+  const repDia = useAgendaDia(rep.fecha);
+  // La hora elegida pudo quedar tomada al cambiar de fecha.
+  const repLibre = rep.fecha && rep.hora && !repDia.ocupadas.includes(rep.hora);
   const [confirmaBorrado, setConfirmaBorrado] = useState(false);
   const [notificar, setNotificar] = useState(true);
   const [ocupado, setOcupado] = useState(false);
-  const estado = ESTADOS[cita.estado];
   const movible = isMovable(cita.estado);
 
   useEffect(() => {
@@ -469,9 +497,9 @@ function Detalle({ cita, hoy, onClose, onAccion, onMover }) {
 
   return (
     <Modal labelledBy="det-titulo" maxWidth={760} onClose={onClose}>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+      <div className="dialog-head">
         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
-          <span style={{ alignSelf: "flex-start", fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: 999, background: estado.bg, color: estado.ink, boxShadow: `inset 0 0 0 1px ${estado.border}` }}>{estado.label}</span>
+          <span className={`estado-${cita.estado} estado-tono`} style={{ alignSelf: "flex-start", fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: 999 }}>{ESTADOS[cita.estado]}</span>
           <h3 id="det-titulo" style={{ fontSize: 22, letterSpacing: "-0.01em" }}>{cita.nombreCompleto}</h3>
           <span style={{ fontSize: 14 }}>
             <span className="mono">{cita.caso}</span>{" "}
@@ -481,7 +509,7 @@ function Detalle({ cita, hoy, onClose, onAccion, onMover }) {
         <CloseButton onClick={onClose} />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 18, padding: "16px 0", borderTop: "1px solid #eef1f6", borderBottom: "1px solid #eef1f6" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 18, padding: "16px 0", borderTop: "1px solid var(--linea-suave)", borderBottom: "1px solid var(--linea-suave)" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <span className="sect">Identificación</span>
           <dl className="dl">
@@ -503,19 +531,18 @@ function Detalle({ cita, hoy, onClose, onAccion, onMover }) {
       </div>
 
       {movible && (
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 10 }}>
-          <div className="field" style={{ flex: "1 1 160px" }}>
+        <div className="fila-campos">
+          <div className="field">
             <label htmlFor="rep-fecha">Reprogramar · fecha</label>
-            <input id="rep-fecha" type="date" value={rep.fecha} onChange={(event) => setRep({ ...rep, fecha: event.target.value })} style={{ minHeight: 40 }} />
+            <DatePicker id="rep-fecha" min={hoy} conBloqueados value={rep.fecha} onChange={(fecha) => setRep({ ...rep, fecha })} />
           </div>
-          <div className="field" style={{ flex: "1 1 120px" }}>
+          <div className="field">
             <label htmlFor="rep-hora">Hora</label>
             <select id="rep-hora" value={rep.hora} onChange={(event) => setRep({ ...rep, hora: event.target.value })} style={{ minHeight: 40 }}>
-              <option value="">—</option>
-              {HORAS.map((h) => <option key={h} value={h}>{h}</option>)}
+              <OpcionesHora ocupadas={repDia.ocupadas} vacio="—" />
             </select>
           </div>
-          <button type="button" className="btn btn-secondary" disabled={!rep.fecha || !rep.hora} onClick={() => onMover(rep.fecha, rep.hora)}>Mover cita…</button>
+          <button type="button" className="btn btn-secondary" disabled={!repLibre} onClick={() => onMover(rep.fecha, rep.hora)}>Mover cita…</button>
         </div>
       )}
 
@@ -542,8 +569,8 @@ function Detalle({ cita, hoy, onClose, onAccion, onMover }) {
       </div>
 
       {confirmaBorrado && (
-        <div role="alert" style={{ padding: 14, borderRadius: 10, background: "#fdf2f2", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px 14px" }}>
-          <strong style={{ fontSize: 14, color: "#7f1d1d", marginRight: "auto" }}>¿Eliminar esta cita del calendario?</strong>
+        <div role="alert" style={{ padding: 14, borderRadius: 10, background: "var(--peligro-fondo)", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px 14px" }}>
+          <strong style={{ fontSize: 14, color: "var(--peligro-texto)", marginRight: "auto" }}>¿Eliminar esta cita del calendario?</strong>
           <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 400 }}>
             <input type="checkbox" style={{ width: "auto", minHeight: 0 }} checked={notificar} onChange={(event) => setNotificar(event.target.checked)} />
             Notificar cancelación por correo
@@ -571,20 +598,8 @@ function Detalle({ cita, hoy, onClose, onAccion, onMover }) {
 function CitaManual({ inicial, today, onClose, onCreada }) {
   const [slot, setSlot] = useState(inicial);
   const [errores, setErrores] = useState({});
-  const [agendaDia, setAgendaDia] = useState({ fecha: "", ocupadas: [], bloqueado: false });
   const idempotencyKey = useRef(createIdempotencyKey());
-
-  // Horas ya tomadas ese día: se deshabilitan en la lista (el servidor igual rechaza un horario ocupado).
-  useEffect(() => {
-    if (!isValidIsoDate(slot.fecha)) return undefined;
-    let activo = true;
-    adminApi(`/api/admin/agenda?desde=${slot.fecha}&hasta=${slot.fecha}`).then(({ ok, data }) => {
-      if (activo && ok) setAgendaDia({ fecha: slot.fecha, ocupadas: data.citas.map((c) => c.hora), bloqueado: data.bloqueados.includes(slot.fecha) });
-    });
-    return () => { activo = false; };
-  }, [slot.fecha]);
-
-  const delDia = agendaDia.fecha === slot.fecha ? agendaDia : { ocupadas: [], bloqueado: false };
+  const delDia = useAgendaDia(slot.fecha);
   const avisoFecha = errores.fecha || (delDia.bloqueado ? "Ese día está desactivado en la agenda." : "");
   const avisoHora = errores.hora || (slot.hora && delDia.ocupadas.includes(slot.hora) ? "Ya hay una cita agendada para esa fecha y hora." : "");
 
@@ -607,7 +622,7 @@ function CitaManual({ inicial, today, onClose, onCreada }) {
 
   return (
     <Modal labelledBy="manual-titulo" maxWidth={760} onClose={onClose}>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+      <div className="dialog-head">
         <div style={{ flex: 1 }}>
           <h3 id="manual-titulo" style={{ fontSize: 22 }}>Nueva cita manual</h3>
           <p className="muted" style={{ fontSize: 14 }}>Para estudiantes atendidos en persona o por teléfono. Queda Confirmada y no envía correo.</p>
@@ -618,12 +633,12 @@ function CitaManual({ inicial, today, onClose, onCreada }) {
         <legend className="sect">Horario de la cita</legend>
         <div className="field">
           <label htmlFor="manual-fecha">Fecha</label>
-          <input
+          <DatePicker
             id="manual-fecha"
-            type="date"
             min={today}
+            conBloqueados
             value={slot.fecha}
-            onChange={(event) => { setSlot({ ...slot, fecha: event.target.value }); setErrores({ ...errores, fecha: "" }); }}
+            onChange={(fecha) => { setSlot({ ...slot, fecha }); setErrores({ ...errores, fecha: "" }); }}
             aria-invalid={Boolean(avisoFecha)}
             className={avisoFecha ? "input-error" : undefined}
           />
@@ -638,11 +653,7 @@ function CitaManual({ inicial, today, onClose, onCreada }) {
             aria-invalid={Boolean(avisoHora)}
             className={avisoHora ? "input-error" : undefined}
           >
-            <option value="">Selecciona la hora</option>
-            {HORAS.map((h) => {
-              const tomada = delDia.ocupadas.includes(h);
-              return <option key={h} value={h} disabled={tomada}>{tomada ? `${h} · ocupada` : h}</option>;
-            })}
+            <OpcionesHora ocupadas={delDia.ocupadas} vacio="Selecciona la hora" />
           </select>
           {avisoHora && <p className="field-error" role="alert">{avisoHora}</p>}
         </div>

@@ -1,15 +1,12 @@
 import { ACCIONES } from "../../../../../lib/agenda.mjs";
 import { getHistory, performAction } from "../../../../../lib/db/agenda-repository.mjs";
 import { getPool } from "../../../../../lib/db/pool.mjs";
-import { actionResponse, adminRoute, deliverEmailsInBackground, readBody } from "../../../../../lib/server/admin-route.mjs";
+import { actionResponse, adminRoute, deliverEmailsInBackground, idDeRuta, readBody } from "../../../../../lib/server/admin-route.mjs";
 import { json } from "../../../../../lib/server/http.mjs";
 
 export const dynamic = "force-dynamic";
 
-async function citaId(params) {
-  const { id } = await params;
-  return /^\d{1,12}$/.test(id) ? id : null;
-}
+const citaId = (params) => idDeRuta(params, 12);
 
 // GET /api/admin/citas/:id → historial
 export const GET = adminRoute(async (request, { params }) => {
