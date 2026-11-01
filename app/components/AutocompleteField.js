@@ -25,19 +25,26 @@ export default function AutocompleteField({
   onCommit,
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
   const listId = `${id}-lista`;
   const showList = isOpen && (options.length > 0 || query.trim() !== "");
+  const activeOption = showList ? options[Math.min(activeIndex, options.length - 1)] : undefined;
 
   function handleChange(event) {
     onQueryChange(event.target.value);
     setIsOpen(true);
+    setActiveIndex(0);
+  }
+
+  function choose(option) {
+    onSelect(option.value);
+    setIsOpen(false);
   }
 
   function handleSelect(event, option) {
     // preventDefault mantiene el foco en el input y evita que el blur se adelante a la selección.
     event.preventDefault();
-    onSelect(option.value);
-    setIsOpen(false);
+    choose(option);
   }
 
   function handleBlur() {
@@ -47,6 +54,22 @@ export default function AutocompleteField({
 
   function handleKeyDown(event) {
     if (event.key === "Escape") setIsOpen(false);
+
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      if (!options.length) return;
+      const step = event.key === "ArrowDown" ? 1 : -1;
+      const current = Math.min(activeIndex, options.length - 1);
+      setActiveIndex(isOpen ? (current + step + options.length) % options.length : 0);
+      setIsOpen(true);
+    }
+
+    // Enter en el buscador elige la sugerencia resaltada; nunca envía el formulario.
+    if (event.key === "Enter") {
+      event.preventDefault();
+      if (activeOption) choose(activeOption);
+      else onCommit();
+    }
   }
 
   return (
@@ -68,18 +91,19 @@ export default function AutocompleteField({
         aria-autocomplete="list"
         aria-expanded={showList}
         aria-controls={listId}
+        aria-activedescendant={activeOption ? `${listId}-${options.indexOf(activeOption)}` : undefined}
         {...errorProps(id, error)}
         required
       />
       {showList && (
         <ul id={listId} className="autocomplete-dropdown" role="listbox" aria-label={listLabel}>
           {options.length > 0 ? (
-            options.map((option) => (
-              <li key={option.key} role="option" aria-selected={selectedKey === option.key}>
+            options.map((option, index) => (
+              <li key={option.key} id={`${listId}-${index}`} role="option" aria-selected={selectedKey === option.key}>
                 <button
                   type="button"
                   tabIndex={-1}
-                  className="autocomplete-item"
+                  className={`autocomplete-item${option === activeOption ? " is-active" : ""}`}
                   onMouseDown={(event) => handleSelect(event, option)}
                 >
                   <span className="item-title">{option.title}</span>
