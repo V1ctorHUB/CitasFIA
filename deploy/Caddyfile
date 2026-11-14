@@ -6,7 +6,7 @@ citas.ejemplo.uca.edu.sv {
 		# Sobrescribe X-Forwarded-For con la IP real: el limitador de solicitudes depende de ello.
 		header_up X-Forwarded-For {remote_host}
 	}
-	# Las rutas administrativas (futuro /admin) solo por Tailscale (RNF-1.1/1.2).
-	@admin path /admin*
+	# Panel (/admin) y su API (/api/admin, login incluido) solo por Tailscale (RNF-1.1/1.2).
+	@admin path /admin* /api/admin*
 	respond @admin 404
 }
