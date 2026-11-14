@@ -60,3 +60,7 @@ graphify-out/
 # --- Documentación local (no se versiona) ---
 *.md
 *.MD
+
+# --- Salidas privadas de herramientas ---
+docs/
+.impeccable/
